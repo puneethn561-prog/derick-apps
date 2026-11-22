@@ -31,7 +31,7 @@ GitHub Actions does the rest.
 Order = the number prefix.
 
 **Fixed date & time (optional):** inside any section add a line like
-`**Schedule:** 2026-11-25 18:00`  (also `25-11-2026 6:00 PM`, `25 Nov 2026 9:30 am`).
+`- **Post date/time:** 25-11-2026 (Wednesday) at **6:00 PM IST**` (kit format, also `**Schedule:** 2026-11-25 18:00`, `25-11-2026 6:00 PM`, `25 Nov 2026 9:30 am`).
 That post goes out at exactly that time (IST) on that platform. Whatever was planned in the same slot
 (morning = before 1 PM, evening = after) is pushed to the next free slot, so the 2 reels/day cap holds.
 Facebook schedules natively to the minute; Instagram/Dailymotion/YouTube are posted by the hourly run. Packages are processed in folder-name order.

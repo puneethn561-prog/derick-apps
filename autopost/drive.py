@@ -41,7 +41,7 @@ def parse_platform_md(text, platform):
         cap = re.search(r"\*\*(?:Caption|Description):\*\*\s*```[a-z]*\n(.*?)```", body, re.S)
         pin = re.search(r"\*\*Pinned[^*]*:\*\*\s*```[a-z]*\n(.*?)```", body, re.S)
         caption = cap.group(1).strip() if cap else ""
-        when = re.search(r"\*\*(?:Schedule|Post at|Date)[^*]*:\*\*\s*(.+)", body, re.I)
+        when = re.search(r"\*\*(?:Schedule|Post\s*(?:date|time|at)|Date)[^*]*:\*\*\s*(.+)", body, re.I)
         out[key] = {
             "schedule": parse_when(when.group(1)) if when else None,
             "title": title.group(1).strip() if title else (caption.splitlines()[0] if caption else key),
