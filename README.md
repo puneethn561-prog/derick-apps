@@ -39,6 +39,7 @@ Order = the number prefix. Packages are processed in folder-name order.
 | `FB_PAGE_TOKEN` | Meta app (Business type) → Graph API Explorer → permissions `pages_show_list, pages_read_engagement, pages_manage_posts, pages_manage_engagement, instagram_basic, instagram_content_publish, instagram_manage_comments` → get **long-lived Page token**. |
 | `IG_TOKEN` | Same token works when Instagram is a Business/Creator account linked to the Page (leave empty to reuse). |
 | `DM_API_KEY`, `DM_API_SECRET` | Dailymotion Studio → Settings → API keys → **Private API key** (video permissions). Optional var `DM_PROFILE_ID`. |
+| `YT_CLIENT_ID`, `YT_CLIENT_SECRET`, `YT_REFRESH_TOKEN` | Google Cloud (same project) → enable **YouTube Data API v3** → OAuth client (Web) → OAuth Playground with own credentials, scopes `youtube.upload youtube.force-ssl` → refresh token. App must be *In production* (testing tokens expire in 7 days). Uploads stay Private until the YouTube API audit passes. |
 
 Then: Actions → autopost → **Run workflow** with `mode=plan, dry_run=1` and check the log.
 

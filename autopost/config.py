@@ -15,8 +15,9 @@ RESERVED_SLOTS = os.getenv("RESERVED_SLOTS", "2026-11-22..2026-11-29@18:00")
 MAIN_SLOTS = [time(20, 0)]
 
 # Platforms that get reels / main videos right now.
-REEL_PLATFORMS = [p.strip() for p in os.getenv("REEL_PLATFORMS", "instagram,facebook,dailymotion").split(",") if p.strip()]
-MAIN_PLATFORMS = [p.strip() for p in os.getenv("MAIN_PLATFORMS", "dailymotion").split(",") if p.strip()]
+_YT_ON = bool(os.getenv("YT_REFRESH_TOKEN"))
+REEL_PLATFORMS = [p.strip() for p in os.getenv("REEL_PLATFORMS", "instagram,facebook,dailymotion" + (",youtube" if _YT_ON else "")).split(",") if p.strip()]
+MAIN_PLATFORMS = [p.strip() for p in os.getenv("MAIN_PLATFORMS", "dailymotion" + (",youtube" if _YT_ON else "")).split(",") if p.strip()]
 
 # How far ahead Facebook can natively schedule a reel (Meta allows 10 min .. 29 days).
 FB_MIN_LEAD_MIN = 15
@@ -42,6 +43,11 @@ DM_API_SECRET = os.getenv("DM_API_SECRET", "")
 DM_USERNAME = os.getenv("DM_USERNAME", "")
 DM_PASSWORD = os.getenv("DM_PASSWORD", "")
 DM_BASE = os.getenv("DM_BASE", "https://api.dailymotion.com")
+
+# YouTube (OAuth refresh token)
+YT_CLIENT_ID = os.getenv("YT_CLIENT_ID", "")
+YT_CLIENT_SECRET = os.getenv("YT_CLIENT_SECRET", "")
+YT_REFRESH_TOKEN = os.getenv("YT_REFRESH_TOKEN", "")
 
 # GitHub (for the daily "pin these comments" checklist issue)
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "")

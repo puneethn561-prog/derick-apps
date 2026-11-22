@@ -36,7 +36,7 @@ def text_for(item, platform, state):
 
 # ---------------------------------------------------------------- publishing
 def publish(drive, item, platform, rec, state, slot=None):
-    from . import dailymotion, meta
+    from . import dailymotion, meta, youtube
     t = text_for(item, platform, state)
     if config.DRY_RUN:
         log(f"DRY_RUN would post {item['name']} -> {platform} at {slot}")
@@ -55,6 +55,17 @@ def publish(drive, item, platform, rec, state, slot=None):
         return vid
     if platform == "dailymotion":
         return dailymotion.publish(path, t["title"], t["caption"], t["tags"])
+    if platform == "youtube":
+        vid = youtube.upload(path, t["title"], t["caption"], t["tags"], short=item["kind"] == "reel")
+        thumb = (item.get("thumbs") or [None])[0] if item["kind"] == "main" else item["covers"].get("youtube")
+        if thumb:
+            try:
+                youtube.set_thumbnail(vid, drive.download(thumb))
+            except Exception as e:
+                log(f"yt thumbnail failed: {e}")
+        if item["kind"] == "main":
+            state.setdefault("links", {})["YOUTUBE_LINK_" + item["name"].split(" / ")[0][:20]] = f"https://youtu.be/{vid}"
+        return vid
     raise ValueError(platform)
 
 
@@ -66,6 +77,9 @@ def post_comment(platform, media_id, text):
         return meta.ig_comment(media_id, text)
     if platform == "facebook":
         return meta.fb_comment(media_id, text)
+    if platform == "youtube":
+        from . import youtube
+        return youtube.comment(media_id, text)
     return None  # Dailymotion API has no comment posting
 
 
@@ -110,7 +124,7 @@ def run_slot(drive, state):
     items = {i["id"]: i for i in drive.items()}
     t = now()
     jobs = []
-    for p in ("instagram", "dailymotion"):
+    for p in ("instagram", "dailymotion", "youtube"):
         for slot, iid in scheduler.due(state, p, t):
             if iid in items:
                 jobs.append((slot, p, iid))
@@ -147,7 +161,7 @@ def post_due_comments(items, state):
         item = items.get(iid)
         if not item or rec.get("skip"):
             continue
-        for p in ("instagram", "facebook"):
+        for p in ("instagram", "facebook", "youtube"):
             cur = rec.get(p)
             if not cur or cur.get("comment_id") or cur.get("status") not in ("published", "scheduled"):
                 continue

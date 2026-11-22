@@ -54,6 +54,9 @@ jobs:
           DM_USERNAME: ${{ secrets.DM_USERNAME }}
           DM_PASSWORD: ${{ secrets.DM_PASSWORD }}
           DM_PROFILE_ID: ${{ vars.DM_PROFILE_ID }}
+          YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
+          YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
+          YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
           RESERVED_SLOTS: ${{ vars.RESERVED_SLOTS || '2026-11-22..2026-11-29@18:00' }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: python -m autopost "${{ steps.mode.outputs.mode }}"
