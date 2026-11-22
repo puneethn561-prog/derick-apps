@@ -1,0 +1,109 @@
+"""Instagram Reels + Facebook Page Reels via the Graph API (local file upload, no public URL needed)."""
+import os
+import time
+
+import requests
+
+from . import config
+
+GRAPH = "https://graph.facebook.com"
+RUPLOAD = "https://rupload.facebook.com"
+
+
+def _check(r):
+    if r.status_code >= 400:
+        raise RuntimeError(f"Meta API {r.status_code}: {r.text[:500]}")
+    return r.json()
+
+
+# ---------------- Instagram ----------------
+def ig_publish_reel(path, caption, share_to_feed=True):
+    """Upload + publish now. Instagram's API has no scheduling, so call this at slot time."""
+    v, tok, uid = config.META_API, config.IG_TOKEN, config.IG_USER_ID
+    c = _check(requests.post(f"{GRAPH}/{v}/{uid}/media", data={
+        "media_type": "REELS", "upload_type": "resumable", "caption": caption,
+        "share_to_feed": str(share_to_feed).lower(), "access_token": tok}))
+    cid = c["id"]
+    size = os.path.getsize(path)
+    with open(path, "rb") as fh:
+        _check(requests.post(f"{RUPLOAD}/ig-api-upload/{v}/{cid}", data=fh, headers={
+            "Authorization": f"OAuth {tok}", "offset": "0", "file_size": str(size)}))
+    for _ in range(60):                       # wait up to ~10 min for processing
+        s = _check(requests.get(f"{GRAPH}/{v}/{cid}", params={"fields": "status_code,status", "access_token": tok}))
+        if s.get("status_code") == "FINISHED":
+            break
+        if s.get("status_code") in ("ERROR", "EXPIRED"):
+            raise RuntimeError(f"IG processing failed: {s}")
+        time.sleep(10)
+    else:
+        raise RuntimeError("IG processing timed out")
+    p = _check(requests.post(f"{GRAPH}/{v}/{uid}/media_publish", data={"creation_id": cid, "access_token": tok}))
+    return p["id"]
+
+
+def ig_comment(media_id, text):
+    r = _check(requests.post(f"{GRAPH}/{config.META_API}/{media_id}/comments",
+                             data={"message": text, "access_token": config.IG_TOKEN}))
+    return r["id"]
+
+
+def ig_published_today_count():
+    """Reels already live today (catches manual posts too), used to respect the 2/day cap."""
+    r = _check(requests.get(f"{GRAPH}/{config.META_API}/{config.IG_USER_ID}/media", params={
+        "fields": "id,media_product_type,timestamp", "limit": 25, "access_token": config.IG_TOKEN}))
+    from datetime import datetime
+    today = datetime.now(config.TZ).date()
+    n = 0
+    for m in r.get("data", []):
+        ts = datetime.strptime(m["timestamp"], "%Y-%m-%dT%H:%M:%S%z").astimezone(config.TZ)
+        if ts.date() == today and m.get("media_product_type") == "REELS":
+            n += 1
+    return n
+
+
+# ---------------- Facebook Page ----------------
+def fb_upload_reel(path, description, publish_at=None, title=None):
+    """Upload a Page reel. publish_at (aware datetime) -> natively SCHEDULED by Facebook."""
+    v, tok, page = config.META_API, config.FB_PAGE_TOKEN, config.FB_PAGE_ID
+    s = _check(requests.post(f"{GRAPH}/{v}/{page}/video_reels",
+                             data={"upload_phase": "start", "access_token": tok}))
+    vid = s["video_id"]
+    size = os.path.getsize(path)
+    with open(path, "rb") as fh:
+        _check(requests.post(f"{RUPLOAD}/video-upload/{v}/{vid}", data=fh, headers={
+            "Authorization": f"OAuth {tok}", "offset": "0", "file_size": str(size)}))
+    data = {"upload_phase": "finish", "video_id": vid, "description": description,
+            "is_ai_generated": "true" if config.AI_LABEL else "false", "access_token": tok}
+    if title:
+        data["title"] = title
+    if publish_at:
+        data["video_state"] = "SCHEDULED"
+        data["scheduled_publish_time"] = str(int(publish_at.timestamp()))
+    else:
+        data["video_state"] = "PUBLISHED"
+    _check(requests.post(f"{GRAPH}/{v}/{page}/video_reels", data=data))
+    return vid
+
+
+def fb_reschedule(video_id, publish_at):
+    _check(requests.post(f"{GRAPH}/{config.META_API}/{video_id}", data={
+        "scheduled_publish_time": str(int(publish_at.timestamp())), "access_token": config.FB_PAGE_TOKEN}))
+
+
+def fb_status(video_id):
+    r = _check(requests.get(f"{GRAPH}/{config.META_API}/{video_id}", params={
+        "fields": "status,scheduled_publish_time,published,permalink_url", "access_token": config.FB_PAGE_TOKEN}))
+    return r
+
+
+def fb_comment(video_id, text):
+    r = _check(requests.post(f"{GRAPH}/{config.META_API}/{video_id}/comments",
+                             data={"message": text, "access_token": config.FB_PAGE_TOKEN}))
+    return r["id"]
+
+
+def fb_set_thumbnail(video_id, image_path):
+    with open(image_path, "rb") as fh:
+        _check(requests.post(f"{GRAPH}/{config.META_API}/{video_id}/thumbnails",
+                             data={"is_preferred": "true", "access_token": config.FB_PAGE_TOKEN},
+                             files={"source": fh}))
