@@ -41,7 +41,8 @@ def publish(drive, item, platform, rec, state, slot=None):
     if config.DRY_RUN:
         log(f"DRY_RUN would post {item['name']} -> {platform} at {slot}")
         return "dry-run"
-    path = drive.download(item["video"])
+    wide = item.get("video_wide") if platform == "youtube" else None
+    path = drive.download(wide or item["video"])
     if platform == "instagram":
         return meta.ig_publish_reel(path, t["caption"])
     if platform == "facebook":
@@ -56,7 +57,7 @@ def publish(drive, item, platform, rec, state, slot=None):
     if platform == "dailymotion":
         return dailymotion.publish(path, t["title"], t["caption"], t["tags"])
     if platform == "youtube":
-        vid = youtube.upload(path, t["title"], t["caption"], t["tags"], short=item["kind"] == "reel")
+        vid = youtube.upload(path, t["title"], t["caption"], t["tags"], short=item["kind"] == "reel" and not wide)
         thumb = (item.get("thumbs") or [None])[0] if item["kind"] == "main" else item["covers"].get("youtube")
         if thumb:
             try:

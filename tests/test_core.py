@@ -108,3 +108,13 @@ def test_fixed_time_bumps_other_post():
     same = [iid for iid, r in state["items"].items()
             if (r.get("instagram", {}).get("slot_key") or r.get("instagram", {}).get("slot")) == target]
     assert same == [r1["id"]], notes
+
+
+def test_reel_16x9_goes_to_youtube_variant():
+    from autopost import drive
+    files=[{"id":"a","name":"03_Reel1_13Nov_9x16_1080.mp4"},{"id":"b","name":"03_Reel1_13Nov_16x9_1080.mp4"},
+           {"id":"c","name":"04_Reel2_14Nov_16x9_1080.mp4"},{"id":"d","name":"02_Main_12Nov_4K.mp4"}]
+    items={i["key"]:i for i in drive.build_items("p","P",files,{})}
+    assert items["Reel1"]["kind"]=="reel" and items["Reel1"]["video"]["id"]=="a" and items["Reel1"]["video_wide"]["id"]=="b"
+    assert items["Reel2"]["kind"]=="reel" and items["Reel2"]["video_wide"]["id"]=="c"
+    assert items["Main"]["kind"]=="main" and items["Main"]["video_wide"] is None

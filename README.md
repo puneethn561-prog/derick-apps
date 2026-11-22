@@ -6,7 +6,8 @@ GitHub Actions does the rest.
 ## Rules
 | What | Where | When (IST) |
 |---|---|---|
-| Teaser + Reels (9x16) | Instagram, Facebook, Dailymotion | 07:30 and 18:00 — max 2 per account per day |
+| Teaser + Reels (9x16) | Instagram, Facebook, Dailymotion, YouTube (Shorts) | 07:30 and 18:00 — max 2 per account per day |
+| Reel 16x9 version (`_16x9_` in name) | YouTube only, as a normal video (replaces the Short) | same slot as the reel |
 | Main video (16x9) | Dailymotion (YouTube later) | 20:00, one per day |
 | Till 29 Nov 2026 | 18:00 is already filled by hand → only 07:30 is used (`RESERVED_SLOTS`) |
 
@@ -26,6 +27,7 @@ GitHub Actions does the rest.
 01_Teaser_11Nov_9x16_1080.mp4     -> reel
 02_Main_12Nov_1080p.mp4 / _4K.mp4 -> main (1080p preferred)
 03_Reel1_13Nov_9x16_1080.mp4      -> reel
+03_Reel1_13Nov_16x9_1080.mp4      -> same reel, 16:9 copy for YouTube
 03_Reel1_13Nov_Cover_fb_9x16.jpg  -> Facebook cover
 ```
 Order = the number prefix.
