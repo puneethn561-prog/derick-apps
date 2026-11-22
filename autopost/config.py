@@ -26,7 +26,7 @@ FB_MAX_LEAD_DAYS = 28
 MISSED_AFTER_MIN = int(os.getenv("MISSED_AFTER_MIN", "75"))
 
 # Google Drive (read only, service account shared on the folder)
-DRIVE_ROOT_ID = os.getenv("DRIVE_ROOT_ID", "")
+DRIVE_ROOT_ID = os.getenv("DRIVE_ROOT_ID") or "1dTS2HuB9ZRLgSXb9TnAd8_2nPi1CGdY6"  # "Social Media Upload Kit"
 GDRIVE_SA_JSON = os.getenv("GDRIVE_SA_JSON", "")
 
 # Meta
