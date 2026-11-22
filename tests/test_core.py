@@ -77,3 +77,34 @@ def test_baseline_skips_existing():
     scheduler.baseline(state, items)
     scheduler.plan(state, items, datetime(2026, 11, 22, 11, tzinfo=TZ))
     assert all("instagram" not in r for r in state["items"].values())
+
+def test_parse_when():
+    from autopost.drive import parse_when
+    assert parse_when("2026-11-25 18:00").startswith("2026-11-25T18:00")
+    assert parse_when("25-11-2026 6:00 PM").startswith("2026-11-25T18:00")
+    assert parse_when("25 Nov 2026 9:30 am").startswith("2026-11-25T09:30")
+    assert parse_when("tomorrow") is None
+
+def test_fixed_time_bumps_other_post():
+    now = datetime(2026, 11, 22, 10, 30, tzinfo=TZ)
+    t = texts()
+    items = build_items("pkg", "EP2", FILES, t)
+    state = {"items": {}, "baselined": True}
+    scheduler.plan(state, items, now)
+    r1 = [i for i in items if i["key"] == "Reel1"][0]
+    r3 = [i for i in items if i["key"] == "Reel3"][0]
+    target = state["items"][r3["id"]]["instagram"]["slot"]
+    tdt = datetime.fromisoformat(target)
+    holder = [iid for iid, r in state["items"].items() if r.get("instagram", {}).get("slot") == target]
+    assert holder and holder[0] != r1["id"]
+    # now Reel1 asks for 30 Nov 10:00 (falls in the morning slot) on instagram only
+    r1["text"]["instagram"] = dict(r1["text"]["instagram"], schedule=tdt.replace(hour=10, minute=0).isoformat())
+    notes = scheduler.plan(state, items, now)
+    ig = state["items"][r1["id"]]["instagram"]
+    assert ig["fixed"] and ig["slot"].startswith(tdt.strftime("%Y-%m-%dT10:00")) and ig["slot_key"] == target
+    moved = state["items"][holder[0]]["instagram"]["slot"]
+    assert moved != target
+    # per-day cap: nobody else on instagram on the 30 Nov morning slot
+    same = [iid for iid, r in state["items"].items()
+            if (r.get("instagram", {}).get("slot_key") or r.get("instagram", {}).get("slot")) == target]
+    assert same == [r1["id"]], notes

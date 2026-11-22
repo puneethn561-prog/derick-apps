@@ -28,7 +28,13 @@ GitHub Actions does the rest.
 03_Reel1_13Nov_9x16_1080.mp4      -> reel
 03_Reel1_13Nov_Cover_fb_9x16.jpg  -> Facebook cover
 ```
-Order = the number prefix. Packages are processed in folder-name order.
+Order = the number prefix.
+
+**Fixed date & time (optional):** inside any section add a line like
+`**Schedule:** 2026-11-25 18:00`  (also `25-11-2026 6:00 PM`, `25 Nov 2026 9:30 am`).
+That post goes out at exactly that time (IST) on that platform. Whatever was planned in the same slot
+(morning = before 1 PM, evening = after) is pushed to the next free slot, so the 2 reels/day cap holds.
+Facebook schedules natively to the minute; Instagram/Dailymotion/YouTube are posted by the hourly run. Packages are processed in folder-name order.
 
 ## One-time setup (repo → Settings → Secrets and variables → Actions)
 **Variables:** `DRIVE_ROOT_ID`, `FB_PAGE_ID`, `IG_USER_ID`  (optional `RESERVED_SLOTS`, `DRY_RUN=1` for testing)

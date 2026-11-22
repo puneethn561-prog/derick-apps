@@ -117,19 +117,23 @@ def run_plan(drive, state):
         except Exception as e:
             fb["status"], fb["error"] = "failed", str(e)[:300]
             log(f"facebook FAILED {item['name']}: {e}")
+    st.save(state)
+    run_slot(drive, state, only_fixed=True, items=items)
     post_due_comments(items, state)
 
 
-def run_slot(drive, state):
-    items = {i["id"]: i for i in drive.items()}
+def run_slot(drive, state, only_fixed=False, items=None):
+    """Post what is due now. Standard slots run from the slot crons; fixed-time posts (any minute)
+    are picked up by the hourly plan run, which waits up to ~58 min for them."""
+    items = items or {i["id"]: i for i in drive.items()}
     t = now()
     jobs = []
     for p in ("instagram", "dailymotion", "youtube"):
-        for slot, iid in scheduler.due(state, p, t):
-            if iid in items:
+        for slot, iid in scheduler.due(state, p, t, before_min=58 if only_fixed else 25):
+            if iid in items and (not only_fixed or state["items"][iid][p].get("fixed")):
                 jobs.append((slot, p, iid))
     if not jobs:
-        log("nothing due")
+        log("nothing due" + (" (fixed-time)" if only_fixed else ""))
         return
     first = min(j[0] for j in jobs)
     wait = (first - now()).total_seconds()

@@ -14,6 +14,16 @@ def slot_times(day, kind):
     return [datetime.combine(day, t, tzinfo=config.TZ) for t in KIND_SLOTS[kind]]
 
 
+def slot_key(dt, kind):
+    """The standard slot a fixed-time post occupies, so the 2-reels/day (1 main/day) cap still holds.
+    Reels: before 13:00 -> that day's 07:30 slot, otherwise the 18:00 slot. Main: that day's main slot."""
+    local = dt.astimezone(config.TZ)
+    slots = slot_times(local.date(), kind)
+    if kind == "reel" and len(slots) > 1:
+        return slots[0] if local.hour < 13 else slots[1]
+    return slots[0]
+
+
 def is_valid_slot(dt, kind):
     local = dt.astimezone(config.TZ)
     return time(local.hour, local.minute) in KIND_SLOTS[kind] and local.second == 0
@@ -50,7 +60,7 @@ def taken_slots(state, platform, kind, exclude=None):
             continue
         p = rec.get(platform)
         if p and p.get("slot") and p.get("status") in ("queued", "scheduled", "published"):
-            out.add(p["slot"])
+            out.add(p.get("slot_key") or p["slot"])
     return out
 
 
@@ -67,7 +77,43 @@ def plan(state, items, now):
     """
     notes = []
     recs = state.setdefault("items", {})
-    for item in sorted(items, key=lambda i: (i["id"].split(":")[0], i["order"])):
+    ordered = sorted(items, key=lambda i: (i["id"].split(":")[0], i["order"]))
+    # pass 1: posts with a date+time given in the package keep that exact time; whoever sat there is bumped
+    for item in ordered:
+        rec = recs.setdefault(item["id"], {})
+        rec.update({"name": item["name"], "kind": item["kind"]})
+        if rec.get("skip"):
+            continue
+        for p in platforms_for(item):
+            want = item["text"][p].get("schedule")
+            cur = rec.get(p) or {}
+            if not want or cur.get("status") == "published":
+                continue
+            wdt = datetime.fromisoformat(want)
+            if wdt < now - timedelta(minutes=config.MISSED_AFTER_MIN):
+                if cur.get("fixed"):
+                    cur.pop("fixed", None)
+                    cur.pop("slot_key", None)
+                    cur["slot"] = want  # let pass 2 treat it as missed
+                    rec[p] = cur
+                continue
+            key = slot_key(wdt, item["kind"]).isoformat()
+            if cur.get("slot") == want and cur.get("fixed"):
+                continue
+            for oid, orec in recs.items():
+                o = orec.get(p)
+                if (oid != item["id"] and orec.get("kind") == item["kind"] and o and not o.get("fixed")
+                        and o.get("status") in ("queued", "scheduled") and (o.get("slot_key") or o.get("slot")) == key):
+                    o["bump"] = True
+            was_scheduled = cur.get("status") == "scheduled" and cur.get("id")
+            cur.update({"slot": want, "slot_key": key, "fixed": True,
+                        "status": "scheduled" if was_scheduled else "queued",
+                        "needs_reschedule": bool(was_scheduled)})
+            if cur.get("status") != "scheduled":
+                cur.pop("error", None)
+            rec[p] = cur
+            notes.append(f"{item['name']} [{p}] -> {wdt:%a %d %b %H:%M} (fixed time from package)")
+    for item in ordered:
         rec = recs.setdefault(item["id"], {})
         rec.update({"name": item["name"], "kind": item["kind"]})
         if rec.get("skip"):
@@ -76,12 +122,14 @@ def plan(state, items, now):
         for p in platforms_for(item):
             cur = rec.get(p) or {}
             status = cur.get("status")
-            if status == "published":
+            if status == "published" or (cur.get("fixed") and status != "failed"):
                 continue
             slot = datetime.fromisoformat(cur["slot"]) if cur.get("slot") else None
             reason = None
             if slot is None:
                 reason = "new"
+            elif cur.pop("bump", False):
+                reason = "pushed by a fixed-time post"
             elif not is_valid_slot(slot, kind):
                 reason = f"wrong time {slot.astimezone(config.TZ):%d %b %H:%M}"
             elif cur["slot"] in taken_slots(state, p, kind, exclude=item["id"]):
@@ -95,6 +143,8 @@ def plan(state, items, now):
             lead = timedelta(minutes=config.FB_MIN_LEAD_MIN + 5 if p == "facebook" else 5)
             new = next_free_slot(taken_slots(state, p, kind, exclude=item["id"]), now + lead, kind)
             was_scheduled = status == "scheduled" and cur.get("id")
+            cur.pop("slot_key", None)
+            cur.pop("fixed", None)
             cur.update({"slot": new.isoformat(), "status": "scheduled" if was_scheduled else "queued",
                         "needs_reschedule": bool(was_scheduled)})
             if status == "failed":

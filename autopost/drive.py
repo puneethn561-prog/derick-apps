@@ -41,13 +41,50 @@ def parse_platform_md(text, platform):
         cap = re.search(r"\*\*(?:Caption|Description):\*\*\s*```[a-z]*\n(.*?)```", body, re.S)
         pin = re.search(r"\*\*Pinned[^*]*:\*\*\s*```[a-z]*\n(.*?)```", body, re.S)
         caption = cap.group(1).strip() if cap else ""
+        when = re.search(r"\*\*(?:Schedule|Post at|Date)[^*]*:\*\*\s*(.+)", body, re.I)
         out[key] = {
+            "schedule": parse_when(when.group(1)) if when else None,
             "title": title.group(1).strip() if title else (caption.splitlines()[0] if caption else key),
             "caption": caption,
             "tags": [t.strip() for t in tags.group(1).split(",")] if tags else [],
             "pinned": pin.group(1).strip() if pin else "",
         }
     return out
+
+
+_MONTHS = {m: i + 1 for i, m in enumerate(
+    ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"])}
+
+
+def parse_when(raw):
+    """'2026-11-25 18:00' | '25-11-2026 6:00 PM' | '25/11/2026 18:00' | '25 Nov 2026 6 PM' -> ISO (IST) or None."""
+    from datetime import datetime
+    s = raw.strip().strip("`*").lower().replace(".", ":")
+    m = re.search(r"(\d{4})-(\d{1,2})-(\d{1,2})", s)
+    if m:
+        y, mo, d = map(int, m.groups())
+    else:
+        m = re.search(r"(\d{1,2})[-/](\d{1,2})[-/](\d{4})", s)
+        if m:
+            d, mo, y = map(int, m.groups())
+        else:
+            m = re.search(r"(\d{1,2})\s*([a-z]{3})[a-z]*\s*(\d{4})", s)
+            if not m or m.group(2) not in _MONTHS:
+                return None
+            d, mo, y = int(m.group(1)), _MONTHS[m.group(2)], int(m.group(3))
+    rest = s[m.end():]
+    t = re.search(r"(\d{1,2})(?::(\d{2}))?\s*(am|pm)?", rest)
+    if not t:
+        return None
+    h, mi = int(t.group(1)), int(t.group(2) or 0)
+    if t.group(3) == "pm" and h < 12:
+        h += 12
+    if t.group(3) == "am" and h == 12:
+        h = 0
+    try:
+        return datetime(y, mo, d, h, mi, tzinfo=config.TZ).isoformat()
+    except ValueError:
+        return None
 
 
 def fill_links(text, links):
