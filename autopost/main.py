@@ -124,12 +124,12 @@ def run_plan(drive, state):
 
 def run_slot(drive, state, only_fixed=False, items=None):
     """Post what is due now. Standard slots run from the slot crons; fixed-time posts (any minute)
-    are picked up by the hourly plan run, which waits up to ~58 min for them."""
+    are picked up by the hourly plan run, which runs at :50 and waits up to ~45 min for them."""
     items = items or {i["id"]: i for i in drive.items()}
     t = now()
     jobs = []
     for p in ("instagram", "dailymotion", "youtube"):
-        for slot, iid in scheduler.due(state, p, t, before_min=58 if only_fixed else 25):
+        for slot, iid in scheduler.due(state, p, t, before_min=45 if only_fixed else 25):
             if iid in items and (not only_fixed or state["items"][iid][p].get("fixed")):
                 jobs.append((slot, p, iid))
     if not jobs:
