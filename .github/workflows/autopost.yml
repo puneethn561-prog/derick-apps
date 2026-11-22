@@ -53,6 +53,7 @@ jobs:
           DM_API_SECRET: ${{ secrets.DM_API_SECRET }}
           DM_USERNAME: ${{ secrets.DM_USERNAME }}
           DM_PASSWORD: ${{ secrets.DM_PASSWORD }}
+          DM_PROFILE_ID: ${{ vars.DM_PROFILE_ID }}
           RESERVED_SLOTS: ${{ vars.RESERVED_SLOTS || '2026-11-22..2026-11-29@18:00' }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: python -m autopost "${{ steps.mode.outputs.mode }}"

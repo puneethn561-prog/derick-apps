@@ -38,7 +38,7 @@ Order = the number prefix. Packages are processed in folder-name order.
 | `GDRIVE_SA_JSON` | Google Cloud → new project → enable **Drive API** → Service account → Keys → JSON. Share the Drive folder with the service-account email (Viewer). |
 | `FB_PAGE_TOKEN` | Meta app (Business type) → Graph API Explorer → permissions `pages_show_list, pages_read_engagement, pages_manage_posts, pages_manage_engagement, instagram_basic, instagram_content_publish, instagram_manage_comments` → get **long-lived Page token**. |
 | `IG_TOKEN` | Same token works when Instagram is a Business/Creator account linked to the Page (leave empty to reuse). |
-| `DM_API_KEY`, `DM_API_SECRET`, `DM_USERNAME`, `DM_PASSWORD` | Dailymotion Partner HQ → API keys. |
+| `DM_API_KEY`, `DM_API_SECRET` | Dailymotion Studio → Settings → API keys → **Private API key** (video permissions). Optional var `DM_PROFILE_ID`. |
 
 Then: Actions → autopost → **Run workflow** with `mode=plan, dry_run=1` and check the log.
 
