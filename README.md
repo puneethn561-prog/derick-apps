@@ -60,3 +60,6 @@ DRY_RUN=1 python -m autopost plan
 
 ## Long videos
 Any video longer than 2 minutes (Drive duration, `LONG_VIDEO_SECONDS`, default 120) is treated as a long/main video and goes only to YouTube + Dailymotion (main slot 20:00 IST), never to Instagram/Facebook.
+
+## Auto delete
+After every post from a Drive zip/folder is published, `state.json` lists it under `cleanup` with its last post time. A daily Hark job moves it to Drive Trash 30 days later (`DELETE_AFTER_DAYS`).

@@ -60,3 +60,6 @@ STATE_PATH = os.getenv("STATE_PATH", "state/state.json")
 AI_LABEL = os.getenv("AI_LABEL", "1") == "1"   # your videos are AI-assisted -> disclose
 DRY_RUN = os.getenv("DRY_RUN", "0") == "1"
 WORKDIR = os.getenv("AUTOPOST_WORKDIR", "/tmp/autopost")
+
+# Drive files are moved to Trash this many days after their last post (done by a daily Hark job).
+DELETE_AFTER_DAYS = int(os.getenv("DELETE_AFTER_DAYS", "30"))

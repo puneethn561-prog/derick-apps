@@ -121,6 +121,30 @@ def run_plan(drive, state):
     st.save(state)
     run_slot(drive, state, only_fixed=True, items=items)
     post_due_comments(items, state)
+    update_cleanup(state)
+
+
+def update_cleanup(state):
+    """state['cleanup']: Drive files/folders whose every post went out, with the last post time.
+    A daily job (outside this repo, with the owner's Drive access) moves them to Trash 30 days later."""
+    by_drive = {}
+    for iid, rec in state.get("items", {}).items():
+        did = iid.split("::")[0].split(":")[0]
+        d = by_drive.setdefault(did, {"done": True, "last": None, "names": set()})
+        d["names"].add(rec.get("name", "").split(" / ")[0])
+        if rec.get("skip"):
+            continue
+        for p in config.REEL_PLATFORMS + config.MAIN_PLATFORMS:
+            r = rec.get(p)
+            if not isinstance(r, dict):
+                continue
+            if r.get("status") != "published":
+                d["done"] = False
+            elif r.get("slot") and (d["last"] is None or r["slot"] > d["last"]):
+                d["last"] = r["slot"]
+    state["cleanup"] = {did: {"name": ", ".join(sorted(d["names"])), "last_posted": d["last"],
+                              "delete_after_days": config.DELETE_AFTER_DAYS}
+                        for did, d in by_drive.items() if d["done"] and d["last"]}
 
 
 def run_slot(drive, state, only_fixed=False, items=None):
