@@ -208,6 +208,9 @@ def main(argv):
     state = st.load()
     try:
         drive = Drive()
+        if mode == "check":
+            from . import check
+            return 0 if check.run(drive) else 1
         if mode == "baseline":
             scheduler.baseline(state, drive.items())
         elif mode == "slot":

@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: "plan | slot | baseline"
+        description: "plan | slot | baseline | check"
         default: plan
       dry_run:
         description: "1 = only print what would be posted"
