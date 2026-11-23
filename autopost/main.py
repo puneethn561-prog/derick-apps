@@ -44,7 +44,7 @@ def publish(drive, item, platform, rec, state, slot=None):
     wide = item.get("video_wide") if platform == "youtube" else None
     path = drive.download(wide or item["video"])
     if platform == "instagram":
-        return meta.ig_publish_reel(path, t["caption"])
+        return meta.ig_publish_reel(path, t["caption"], thumb_offset_ms=t.get("thumb_offset_ms") or (item["text"].get("youtube") or {}).get("thumb_offset_ms"))
     if platform == "facebook":
         vid = meta.fb_upload_reel(path, t["caption"], publish_at=slot, title=t.get("title"))
         cover = item["covers"].get("facebook")
@@ -208,6 +208,10 @@ def main(argv):
     state = st.load()
     try:
         drive = Drive()
+        if mode == "trial":
+            from . import check, trial
+            ok_login = check.run(drive)
+            return 0 if (trial.run(drive, now()) and ok_login) else 1
         if mode == "check":
             from . import check
             return 0 if check.run(drive) else 1

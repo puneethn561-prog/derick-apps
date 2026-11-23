@@ -17,12 +17,13 @@ def _check(r):
 
 
 # ---------------- Instagram ----------------
-def ig_publish_reel(path, caption, share_to_feed=True):
+def ig_publish_reel(path, caption, share_to_feed=True, thumb_offset_ms=None):
     """Upload + publish now. Instagram's API has no scheduling, so call this at slot time."""
     v, tok, uid = config.META_API, config.IG_TOKEN, config.IG_USER_ID
     c = _check(requests.post(f"{GRAPH}/{v}/{uid}/media", data={
         "media_type": "REELS", "upload_type": "resumable", "caption": caption,
-        "share_to_feed": str(share_to_feed).lower(), "access_token": tok}))
+        "share_to_feed": str(share_to_feed).lower(), "access_token": tok,
+        **({"thumb_offset": str(int(thumb_offset_ms))} if thumb_offset_ms else {})}))
     cid = c["id"]
     size = os.path.getsize(path)
     with open(path, "rb") as fh:

@@ -12,12 +12,18 @@ A package folder looks like (Chivari Bussu EP2 - Upload Package):
   02_Main_12Nov_Thumb_A.jpg ...
 
 DRIVE_ROOT_ID = a folder that holds package folders (every subfolder with 00_Text_*.md is a package),
-or one package folder itself.
+or one package folder itself. A .zip file in the root (or in a package folder) is opened in place:
+every folder inside the zip that holds 00_Text_*.md files is a package. Only the zip's index and text
+files are read on each run (HTTP range requests); a video is extracted only when it is posted, and its
+length is measured once and cached in state/durations.json.
 """
 import io
 import json
 import os
 import re
+import shutil
+import subprocess
+import zipfile
 
 from . import config
 
@@ -153,6 +159,114 @@ def build_items(pkg_id, pkg_name, files, texts):
     return items
 
 
+def build_kit_item(pkg_id, pkg_name, files, kit):
+    """One video + thumbnail + UPLOAD KIT pdf -> one item. Kind by length (> 2 min = long video)."""
+    vids = [f for f in files if f["name"].lower().endswith((".mp4", ".mov", ".m4v"))]
+    if not vids:
+        return []
+    wide = [v for v in vids if re.search(r"16x9|16_9|horizontal|landscape", v["name"], re.I)]
+    main_v = [v for v in vids if v not in wide] or vids
+    video = main_v[0]
+    imgs = [f for f in files if f["name"].lower().endswith((".jpg", ".jpeg", ".png"))]
+    thumb = ([i for i in imgs if "thumb" in i["name"].lower() or "cover" in i["name"].lower()] or imgs or [None])[0]
+    long_v = duration_s(video) > config.LONG_VIDEO_SECONDS
+    text = {p: v for p, v in kit.items() if not p.startswith("_")}
+    key = re.sub(r"[^A-Za-z0-9]+", "", kit.get("_name") or pkg_name)[:40] or "Video"
+    return [{"id": f"{pkg_id}:{key}", "name": f"{pkg_name} / {kit.get('_name') or key}", "key": key,
+             "kind": "main" if long_v else "reel", "order": 1, "video": video,
+             "video_wide": wide[0] if (wide and not long_v) else None,
+             "covers": {p: thumb for p in ("instagram", "facebook", "youtube", "dailymotion")} if thumb else {},
+             "thumbs": [thumb] if thumb else [], "text": text}]
+
+
+# ---------------------------------------------------------------- zip helpers
+def is_zip(f):
+    return f["name"].lower().endswith(".zip") or f.get("mimeType") in ("application/zip", "application/x-zip-compressed")
+
+
+def probe_ms(path):
+    try:
+        out = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", path],
+                             capture_output=True, text=True, timeout=120).stdout.strip()
+        return int(float(out) * 1000) if out else 0
+    except Exception:
+        return 0
+
+
+DURATIONS_PATH = os.path.join(os.path.dirname(config.STATE_PATH) or ".", "durations.json")
+
+
+def load_durations():
+    try:
+        with open(DURATIONS_PATH) as fh:
+            return json.load(fh)
+    except (OSError, ValueError):
+        return {}
+
+
+def save_durations(d):
+    os.makedirs(os.path.dirname(DURATIONS_PATH) or ".", exist_ok=True)
+    with open(DURATIONS_PATH, "w") as fh:
+        json.dump(d, fh, indent=1, sort_keys=True)
+
+
+class DriveRangeFile(io.RawIOBase):
+    """Seekable read-only view of a Drive file using HTTP Range requests, so zipfile can read
+    the index and single entries without downloading the whole zip."""
+    BLOCK = 8 * 1024 * 1024
+
+    def __init__(self, svc, file_id, size):
+        self.svc, self.file_id, self.size, self.pos = svc, file_id, size, 0
+        self._cache = (None, b"")
+        if not size:
+            meta = svc.files().get(fileId=file_id, fields="size", supportsAllDrives=True).execute()
+            self.size = int(meta["size"])
+
+    def readable(self):
+        return True
+
+    def seekable(self):
+        return True
+
+    def tell(self):
+        return self.pos
+
+    def seek(self, off, whence=0):
+        self.pos = off if whence == 0 else self.pos + off if whence == 1 else self.size + off
+        return self.pos
+
+    def _fetch(self, start, end):
+        url = f"https://www.googleapis.com/drive/v3/files/{self.file_id}?alt=media&supportsAllDrives=true"
+        resp, content = self.svc._http.request(url, headers={"Range": f"bytes={start}-{end}"})
+        if int(resp.status) not in (200, 206):
+            raise IOError(f"Drive range read {resp.status}")
+        return content
+
+    def read(self, n=-1):
+        if self.pos >= self.size:
+            return b""
+        if n is None or n < 0:
+            n = self.size - self.pos
+        n = min(n, self.size - self.pos)
+        start0, buf = self._cache
+        if start0 is not None and start0 <= self.pos and self.pos + n <= start0 + len(buf):
+            out = buf[self.pos - start0:self.pos - start0 + n]
+        elif n >= self.BLOCK:
+            out = self._fetch(self.pos, self.pos + n - 1)
+        else:
+            end = min(self.size, self.pos + max(n, self.BLOCK)) - 1
+            buf = self._fetch(self.pos, end)
+            self._cache = (self.pos, buf)
+            out = buf[:n]
+        self.pos += len(out)
+        return out
+
+    def readinto(self, b):
+        data = self.read(len(b))
+        b[:len(data)] = data
+        return len(data)
+
+
 # ---------------------------------------------------------------- Drive client
 class Drive:
     def __init__(self):
@@ -174,6 +288,15 @@ class Drive:
             if not token:
                 return sorted(out, key=lambda f: f["name"])
 
+    def read_bytes(self, file_id):
+        from googleapiclient.http import MediaIoBaseDownload
+        buf = io.BytesIO()
+        dl = MediaIoBaseDownload(buf, self.svc.files().get_media(fileId=file_id, supportsAllDrives=True))
+        done = False
+        while not done:
+            _, done = dl.next_chunk()
+        return buf.getvalue()
+
     def read_text(self, file_id):
         from googleapiclient.http import MediaIoBaseDownload
         buf = io.BytesIO()
@@ -190,19 +313,108 @@ class Drive:
             if m and m.group(1).lower() in PLATFORM_FILES and f["name"].endswith(".md"):
                 plat = m.group(1).lower()
                 texts[plat] = parse_platform_md(self.read_text(f["id"]), plat)
-        return build_items(folder_id, name, files, texts) if texts else []
+        if texts:
+            return build_items(folder_id, name, files, texts)
+        for pf in [f for f in files if f["name"].lower().endswith(".pdf")]:
+            from . import kitpdf
+            t = kitpdf.pdf_text(self.read_bytes(pf["id"]))
+            if kitpdf.is_kit(t):
+                return build_kit_item(folder_id, name, files, kitpdf.parse(t))
+        return []
 
-    def items(self):
-        root = self.ls(config.DRIVE_ROOT_ID)
-        if any(f["name"].startswith("00_Text_") for f in root):
-            return self._package(config.DRIVE_ROOT_ID, "package", root)
+    def items(self, root_id=None):
+        root_id = root_id or config.DRIVE_ROOT_ID
+        root = self.ls(root_id)
         items = []
+        if any(f["name"].startswith("00_Text_") or f["name"].lower().endswith(".pdf") for f in root):
+            items += self._package(root_id, "package", root)
         for f in root:
             if f["mimeType"] == FOLDER:
-                items += self._package(f["id"], f["name"], self.ls(f["id"]))
+                sub = self.ls(f["id"])
+                items += self._package(f["id"], f["name"], sub)
+                items += self._zip_items([z for z in sub if is_zip(z)])
+        items += self._zip_items([z for z in root if is_zip(z)])
         return items
 
-    def download(self, f):
+    # ------------------------------------------------------------ zip packages
+    def _zip_items(self, zips):
+        items = []
+        for z in zips:
+            try:
+                items += self._zip_package(z)
+            except Exception as e:  # a broken zip must not stop the other packages
+                print(f"[zip] cannot read {z['name']}: {e}")
+        return items
+
+    def _zip_package(self, z):
+        zf = zipfile.ZipFile(DriveRangeFile(self.svc, z["id"], int(z.get("size") or 0)))
+        dirs = {}
+        for info in zf.infolist():
+            if info.is_dir() or "__MACOSX" in info.filename or os.path.basename(info.filename).startswith("."):
+                continue
+            d, name = os.path.split(info.filename)
+            dirs.setdefault(d, []).append({
+                "id": f"{z['id']}::{info.filename}", "name": name, "mimeType": "", "size": info.file_size,
+                "zip_id": z["id"], "zip_size": int(z.get("size") or 0), "zip_entry": info.filename,
+                "videoMediaMetadata": {"durationMillis": self.durations.get(f"{z['id']}::{info.filename}", 0)}})
+        items = []
+        base = re.sub(r"\.zip$", "", z["name"], flags=re.I)
+        for d, files in sorted(dirs.items()):
+            texts = {}
+            for f in files:
+                m = re.match(r"^00_Text_([A-Za-z]+)_", f["name"])
+                if m and m.group(1).lower() in PLATFORM_FILES and f["name"].endswith(".md"):
+                    texts[m.group(1).lower()] = parse_platform_md(
+                        zf.read(f["zip_entry"]).decode("utf-8-sig"), m.group(1).lower())
+            if not texts:
+                pdfs = [f for f in files if f["name"].lower().endswith(".pdf")]
+                for pf in pdfs:
+                    from . import kitpdf
+                    t = kitpdf.pdf_text(zf.read(pf["zip_entry"]))
+                    if kitpdf.is_kit(t):
+                        self._measure(zf, files)
+                        items += build_kit_item(f"{z['id']}::{d}", f"{base}/{d}" if d else base, files, kitpdf.parse(t))
+                        break
+                continue
+            self._measure(zf, files)
+            name = f"{base}/{d}" if d else base
+            items += build_items(f"{z['id']}::{d}", name, files, texts)
+        return items
+
+    def _measure(self, zf, files):
+        """Video length for zip entries (Drive can't see inside a zip); measured once, cached."""
+        changed = False
+        for f in files:
+            if not f["name"].lower().endswith((".mp4", ".mov", ".m4v")) or f["videoMediaMetadata"]["durationMillis"]:
+                continue
+            path = self.download(f, zf=zf)
+            ms = probe_ms(path)
+            if ms:
+                self.durations[f["id"]] = ms
+                f["videoMediaMetadata"]["durationMillis"] = ms
+                changed = True
+        if changed:
+            save_durations(self.durations)
+
+    @property
+    def durations(self):
+        if not hasattr(self, "_durations"):
+            self._durations = load_durations()
+        return self._durations
+
+    def download(self, f, zf=None):
+        if f.get("zip_id"):
+            os.makedirs(config.WORKDIR, exist_ok=True)
+            path = os.path.join(config.WORKDIR, f"{f['zip_id']}_{f['zip_entry'].replace('/', '_')}")
+            if not os.path.exists(path):
+                zf = zf or zipfile.ZipFile(DriveRangeFile(self.svc, f["zip_id"], f["zip_size"]))
+                with zf.open(f["zip_entry"]) as src, open(path + ".part", "wb") as dst:
+                    shutil.copyfileobj(src, dst, 16 * 1024 * 1024)
+                os.rename(path + ".part", path)
+            return path
+        return self._download_drive(f)
+
+    def _download_drive(self, f):
         from googleapiclient.http import MediaIoBaseDownload
         os.makedirs(config.WORKDIR, exist_ok=True)
         path = os.path.join(config.WORKDIR, f"{f['id']}_{f['name']}")

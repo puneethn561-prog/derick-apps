@@ -129,3 +129,30 @@ def test_long_video_over_2min_is_main():
     items = {i["key"]: i for i in drive.build_items("p", "P", files, {})}
     assert items["Story"]["kind"] == "main"
     assert items["Clip"]["kind"] == "reel"
+
+
+def test_zip_package(tmp_path, monkeypatch):
+    import io, zipfile, subprocess
+    from autopost import drive, config
+    vid = tmp_path / "v.mp4"
+    subprocess.run(["ffmpeg", "-v", "error", "-f", "lavfi", "-i", "color=c=black:s=64x64:d=150", "-y", str(vid)], check=True)
+    short = tmp_path / "s.mp4"
+    subprocess.run(["ffmpeg", "-v", "error", "-f", "lavfi", "-i", "color=c=black:s=64x64:d=5", "-y", str(short)], check=True)
+    md = "## Story — Dailymotion\n**Title:** Long one\n\n## Clip — Dailymotion\n**Title:** Short one\n"
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        z.writestr("EP9/00_Text_Dailymotion_titles.md", md)
+        z.write(vid, "EP9/05_Story_20Nov_9x16_1080.mp4")
+        z.write(short, "EP9/06_Clip_21Nov_9x16_1080.mp4")
+        z.writestr("__MACOSX/EP9/._x", "junk")
+    data = buf.getvalue()
+    monkeypatch.setattr(drive, "DriveRangeFile", lambda svc, fid, size: io.BytesIO(data))
+    monkeypatch.setattr(drive, "DURATIONS_PATH", str(tmp_path / "durations.json"))
+    monkeypatch.setattr(config, "WORKDIR", str(tmp_path / "work"))
+    d = drive.Drive.__new__(drive.Drive); d.svc = None
+    items = {i["key"]: i for i in d._zip_package({"id": "Z", "name": "EP9.zip", "size": len(data)})}
+    assert items["Story"]["kind"] == "main" and items["Clip"]["kind"] == "reel"
+    assert items["Story"]["text"]["dailymotion"]["title"] == "Long one"
+    assert drive.load_durations()["Z::EP9/05_Story_20Nov_9x16_1080.mp4"] >= 149000
+    p = d.download(items["Clip"]["video"])
+    assert open(p, "rb").read() == short.read_bytes()

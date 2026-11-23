@@ -9,11 +9,14 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: "plan | slot | baseline | check"
+        description: "plan | slot | baseline | check | trial"
         default: plan
       dry_run:
         description: "1 = only print what would be posted"
         default: "0"
+      drive_root:
+        description: "trial only: Drive folder id to test (nothing is posted)"
+        default: ""
 
 permissions:
   contents: write
@@ -34,6 +37,7 @@ jobs:
           python-version: "3.12"
           cache: pip
       - run: pip install -r requirements.txt
+      - run: command -v ffprobe || (sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg)
       - name: Pick mode
         id: mode
         run: |
@@ -42,8 +46,9 @@ jobs:
           else echo "mode=slot" >> $GITHUB_OUTPUT; fi
       - name: Run
         env:
-          DRY_RUN: ${{ inputs.dry_run || vars.DRY_RUN || '0' }}
-          DRIVE_ROOT_ID: ${{ vars.DRIVE_ROOT_ID }}
+          DRY_RUN: ${{ inputs.mode == 'trial' && '1' || inputs.dry_run || vars.DRY_RUN || '0' }}
+          DRIVE_ROOT_ID: ${{ inputs.mode == 'trial' && inputs.drive_root || vars.DRIVE_ROOT_ID }}
+          STATE_PATH: ${{ inputs.mode == 'trial' && '/tmp/trial/state.json' || 'state/state.json' }}
           GDRIVE_SA_JSON: ${{ secrets.GDRIVE_SA_JSON }}
           FB_PAGE_ID: ${{ vars.FB_PAGE_ID }}
           FB_PAGE_TOKEN: ${{ secrets.FB_PAGE_TOKEN }}
@@ -65,5 +70,5 @@ jobs:
         run: |
           git config user.name "autopost-bot"
           git config user.email "autopost-bot@users.noreply.github.com"
-          git add state/state.json || true
+          git add state/ || true
           git diff --cached --quiet || (git commit -m "state: ${{ steps.mode.outputs.mode }} $(date -u +%FT%TZ)" && git pull --rebase && git push)
