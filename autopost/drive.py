@@ -113,6 +113,29 @@ def duration_s(f):
         return 0
 
 
+def dims(f):
+    m = f.get("videoMediaMetadata") or {}
+    try:
+        return int(m.get("width") or 0), int(m.get("height") or 0)
+    except (TypeError, ValueError):
+        return 0, 0
+
+
+def is_wide(f):
+    """16:9 / landscape video: by real size when known, else by file name."""
+    w, h = dims(f)
+    if w and h and w != h:
+        return w > h
+    return bool(re.search(r"16x9|16_9|horizontal|landscape", f["name"], re.I))
+
+
+def is_vertical(f):
+    w, h = dims(f)
+    if w and h and w != h:
+        return h > w
+    return bool(re.search(r"9x16|9_16|vertical|portrait", f["name"], re.I))
+
+
 def build_items(pkg_id, pkg_name, files, texts):
     """Group package files into items (Teaser, Main, Reel1..)."""
     groups = {}
@@ -134,8 +157,8 @@ def build_items(pkg_id, pkg_name, files, texts):
     for key, g in sorted(groups.items(), key=lambda kv: kv[1]["order"]):
         if not g["videos"]:
             continue
-        vertical = [v for v in g["videos"] if "9x16" in v["name"]]
-        wide = [v for v in g["videos"] if "16x9" in v["name"]]
+        vertical = [v for v in g["videos"] if is_vertical(v)]
+        wide = [v for v in g["videos"] if v not in vertical and is_wide(v)]
         video_wide = None
         # Long video = longer than LONG_VIDEO_SECONDS (2 min): always goes as a main video to YouTube + Dailymotion only.
         long_vids = [v for v in g["videos"] if duration_s(v) > config.LONG_VIDEO_SECONDS]
@@ -143,7 +166,7 @@ def build_items(pkg_id, pkg_name, files, texts):
             kind = "main"
             hd = [v for v in long_vids if "1080" in v["name"]]
             video = hd[0] if hd else sorted(long_vids, key=lambda v: int(v.get("size") or 0))[0]
-        elif vertical or (wide and (not key.lower().startswith("main") or any(duration_s(v) for v in wide))):
+        elif vertical:
             # reel: 9x16 goes to IG/FB/DM (and YT Shorts); a 16x9 version, if present, goes to YouTube as a normal video
             kind = "reel"
             video = vertical[0] if vertical else wide[0]
@@ -164,12 +187,13 @@ def build_kit_item(pkg_id, pkg_name, files, kit):
     vids = [f for f in files if f["name"].lower().endswith((".mp4", ".mov", ".m4v"))]
     if not vids:
         return []
-    wide = [v for v in vids if re.search(r"16x9|16_9|horizontal|landscape", v["name"], re.I)]
+    wide = [v for v in vids if is_wide(v)]
     main_v = [v for v in vids if v not in wide] or vids
     video = main_v[0]
     imgs = [f for f in files if f["name"].lower().endswith((".jpg", ".jpeg", ".png"))]
     thumb = ([i for i in imgs if "thumb" in i["name"].lower() or "cover" in i["name"].lower()] or imgs or [None])[0]
-    long_v = duration_s(video) > config.LONG_VIDEO_SECONDS
+    # 16:9-only package or > 2 min -> main video (YouTube + Dailymotion only)
+    long_v = duration_s(video) > config.LONG_VIDEO_SECONDS or is_wide(video)
     text = {p: v for p, v in kit.items() if not p.startswith("_")}
     key = re.sub(r"[^A-Za-z0-9]+", "", kit.get("_name") or pkg_name)[:40] or "Video"
     return [{"id": f"{pkg_id}:{key}", "name": f"{pkg_name} / {kit.get('_name') or key}", "key": key,
@@ -184,13 +208,32 @@ def is_zip(f):
     return f["name"].lower().endswith(".zip") or f.get("mimeType") in ("application/zip", "application/x-zip-compressed")
 
 
-def probe_ms(path):
+def probe(path):
+    """{'ms', 'w', 'h'} of a video (display size, rotation applied)."""
     try:
-        out = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", path],
-                             capture_output=True, text=True, timeout=120).stdout.strip()
-        return int(float(out) * 1000) if out else 0
+        out = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries",
+                              "stream=width,height:stream_side_data=rotation:format=duration", "-of", "json", path],
+                             capture_output=True, text=True, timeout=120).stdout
+        j = json.loads(out or "{}")
+        st = (j.get("streams") or [{}])[0]
+        w, h = int(st.get("width") or 0), int(st.get("height") or 0)
+        rot = next((abs(int(x.get("rotation", 0))) for x in st.get("side_data_list") or [] if "rotation" in x), 0)
+        if rot in (90, 270):
+            w, h = h, w
+        return {"ms": int(float((j.get("format") or {}).get("duration") or 0) * 1000), "w": w, "h": h}
     except Exception:
-        return 0
+        return {"ms": 0, "w": 0, "h": 0}
+
+
+def probe_ms(path):
+    return probe(path)["ms"]
+
+
+def _meta(v):
+    """Cached probe -> Drive-style videoMediaMetadata (old cache entries are plain ms ints)."""
+    if isinstance(v, dict):
+        return {"durationMillis": v.get("ms", 0), "width": v.get("w", 0), "height": v.get("h", 0)}
+    return {"durationMillis": v or 0}
 
 
 DURATIONS_PATH = os.path.join(os.path.dirname(config.STATE_PATH) or ".", "durations.json")
@@ -281,7 +324,7 @@ class Drive:
         out, token = [], None
         while True:
             r = self.svc.files().list(q=f"'{parent_id}' in parents and trashed = false",
-                                      fields="nextPageToken, files(id,name,mimeType,size,videoMediaMetadata(durationMillis))", pageToken=token,
+                                      fields="nextPageToken, files(id,name,mimeType,size,videoMediaMetadata(durationMillis,width,height))", pageToken=token,
                                       pageSize=500, supportsAllDrives=True, includeItemsFromAllDrives=True).execute()
             out += r.get("files", [])
             token = r.get("nextPageToken")
@@ -356,7 +399,7 @@ class Drive:
             dirs.setdefault(d, []).append({
                 "id": f"{z['id']}::{info.filename}", "name": name, "mimeType": "", "size": info.file_size,
                 "zip_id": z["id"], "zip_size": int(z.get("size") or 0), "zip_entry": info.filename,
-                "videoMediaMetadata": {"durationMillis": self.durations.get(f"{z['id']}::{info.filename}", 0)}})
+                "videoMediaMetadata": _meta(self.durations.get(f"{z['id']}::{info.filename}"))})
         items = []
         base = re.sub(r"\.zip$", "", z["name"], flags=re.I)
         for d, files in sorted(dirs.items()):
@@ -385,13 +428,14 @@ class Drive:
         """Video length for zip entries (Drive can't see inside a zip); measured once, cached."""
         changed = False
         for f in files:
-            if not f["name"].lower().endswith((".mp4", ".mov", ".m4v")) or f["videoMediaMetadata"]["durationMillis"]:
+            vm = f["videoMediaMetadata"]
+            if not f["name"].lower().endswith((".mp4", ".mov", ".m4v")) or (vm.get("durationMillis") and vm.get("width")):
                 continue
             path = self.download(f, zf=zf)
-            ms = probe_ms(path)
-            if ms:
-                self.durations[f["id"]] = ms
-                f["videoMediaMetadata"]["durationMillis"] = ms
+            pr = probe(path)
+            if pr["ms"]:
+                self.durations[f["id"]] = pr
+                f["videoMediaMetadata"] = _meta(pr)
                 changed = True
         if changed:
             save_durations(self.durations)

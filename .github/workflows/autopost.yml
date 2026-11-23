@@ -3,9 +3,9 @@ name: autopost
 on:
   schedule:
     - cron: "50 * * * *"     # hourly planner at :50 (FB native scheduling, fixes, comments, fixed-time posts due in next 45 min)
-    - cron: "45 1 * * *"     # 07:15 IST -> 07:30 reel slot (Instagram + Dailymotion)
-    - cron: "15 12 * * *"    # 17:45 IST -> 18:00 reel slot
-    - cron: "15 14 * * *"    # 19:45 IST -> 20:00 main video slot
+    - cron: "15 1 * * *"     # 06:45 IST -> 07:00 reel slot
+    - cron: "15 8 * * *"     # 13:45 IST -> 14:00 main video slot (2nd main video of the day)
+    - cron: "15 12 * * *"    # 17:45 IST -> 18:00 reel slot + main video slot
   workflow_dispatch:
     inputs:
       mode:

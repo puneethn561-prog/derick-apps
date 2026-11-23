@@ -6,7 +6,7 @@ from zoneinfo import ZoneInfo
 TZ = ZoneInfo(os.getenv("AUTOPOST_TZ", "Asia/Kolkata"))
 
 # Daily reel slots (local time). Max reels per account per day = len(REEL_SLOTS).
-REEL_SLOTS = [time(7, 30), time(18, 0)]
+REEL_SLOTS = [time(7, 0), time(18, 0)]
 # Slots you already filled by hand (all platforms), format "YYYY-MM-DD..YYYY-MM-DD@HH:MM;..."
 # Default: 6 PM is already scheduled manually on every platform up to 29 Nov 2026.
 RESERVED_SLOTS = os.getenv("RESERVED_SLOTS", "2026-11-22..2026-11-29@18:00")
@@ -15,7 +15,8 @@ RESERVED_SLOTS = os.getenv("RESERVED_SLOTS", "2026-11-22..2026-11-29@18:00")
 LONG_VIDEO_SECONDS = int(os.getenv("LONG_VIDEO_SECONDS", "120"))
 
 # Main video slot(s): one main video per day.
-MAIN_SLOTS = [time(20, 0)]
+MAIN_SLOTS = [time(14, 0), time(18, 0)]   # one main that day -> 18:00; two -> 14:00 + 18:00
+MAIN_PREFERRED = time(18, 0)
 
 # Platforms that get reels / main videos right now.
 _YT_ON = bool(os.getenv("YT_REFRESH_TOKEN"))

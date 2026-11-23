@@ -43,12 +43,12 @@ def test_plan_reserved_and_two_per_day():
     for p in ("instagram", "facebook", "dailymotion"):
         reels = sorted(r[p]["slot"] for r in state["items"].values() if r["kind"] == "reel" and p in r)
         hours = [datetime.fromisoformat(s) for s in reels]
-        # until 29 Nov: only 07:30. 4 reels -> 23,24,25,26 Nov 07:30
-        assert [h.strftime("%d %H:%M") for h in hours] == ["23 07:30", "24 07:30", "25 07:30", "26 07:30"], (p, hours)
+        # until 29 Nov: only 07:00. 4 reels -> 23,24,25,26 Nov 07:00
+        assert [h.strftime("%d %H:%M") for h in hours] == ["23 07:00", "24 07:00", "25 07:00", "26 07:00"], (p, hours)
         assert len(set(reels)) == len(reels)
     main = [r for r in state["items"].values() if r["kind"] == "main"][0]
     assert set(main) >= {"dailymotion"} and "instagram" not in main
-    assert datetime.fromisoformat(main["dailymotion"]["slot"]).strftime("%d %H:%M") == "22 20:00"
+    assert datetime.fromisoformat(main["dailymotion"]["slot"]).strftime("%d %H:%M") == "22 14:00"
 
 def test_after_29_two_slots():
     now = datetime(2026, 11, 30, 6, 0, tzinfo=TZ)
@@ -57,7 +57,7 @@ def test_after_29_two_slots():
     scheduler.plan(state, items, now)
     slots = sorted(datetime.fromisoformat(r["instagram"]["slot"]).strftime("%d %H:%M")
                    for r in state["items"].values() if r["kind"] == "reel")
-    assert slots == ["30 07:30", "30 18:00", "01 07:30", "01 18:00"] or slots == sorted(["30 07:30", "30 18:00", "01 07:30", "01 18:00"])
+    assert slots == ["30 07:00", "30 18:00", "01 07:00", "01 18:00"] or slots == sorted(["30 07:00", "30 18:00", "01 07:00", "01 18:00"])
 
 def test_fix_wrong_time_and_missed():
     now = datetime(2026, 12, 5, 9, 0, tzinfo=TZ)
@@ -116,7 +116,7 @@ def test_reel_16x9_goes_to_youtube_variant():
            {"id":"c","name":"04_Reel2_14Nov_16x9_1080.mp4"},{"id":"d","name":"02_Main_12Nov_4K.mp4"}]
     items={i["key"]:i for i in drive.build_items("p","P",files,{})}
     assert items["Reel1"]["kind"]=="reel" and items["Reel1"]["video"]["id"]=="a" and items["Reel1"]["video_wide"]["id"]=="b"
-    assert items["Reel2"]["kind"]=="reel" and items["Reel2"]["video_wide"]["id"]=="c"
+    assert items["Reel2"]["kind"]=="main" and items["Reel2"]["video"]["id"]=="c"   # 16:9 only -> main track (YT + DM)
     assert items["Main"]["kind"]=="main" and items["Main"]["video_wide"] is None
 
 
@@ -153,6 +153,41 @@ def test_zip_package(tmp_path, monkeypatch):
     items = {i["key"]: i for i in d._zip_package({"id": "Z", "name": "EP9.zip", "size": len(data)})}
     assert items["Story"]["kind"] == "main" and items["Clip"]["kind"] == "reel"
     assert items["Story"]["text"]["dailymotion"]["title"] == "Long one"
-    assert drive.load_durations()["Z::EP9/05_Story_20Nov_9x16_1080.mp4"] >= 149000
+    assert drive.load_durations()["Z::EP9/05_Story_20Nov_9x16_1080.mp4"]["ms"] >= 149000
     p = d.download(items["Clip"]["video"])
     assert open(p, "rb").read() == short.read_bytes()
+
+
+def _mk(key, order, kind, wide=False):
+    return {"id": f"P{order}:{key}", "name": key, "key": key, "kind": kind, "order": order,
+            "video_wide": {"name": "w"} if wide else None,
+            "text": {p: {} for p in ("instagram", "facebook", "dailymotion", "youtube")}}
+
+def _hm(state, iid, p):
+    return datetime.fromisoformat(state["items"][iid][p]["slot"]).strftime("%d %H:%M")
+
+def test_main_track_rules(monkeypatch):
+    monkeypatch.setattr(config, "MAIN_PLATFORMS", ["dailymotion", "youtube"])
+    monkeypatch.setattr(config, "REEL_PLATFORMS", ["instagram", "facebook", "dailymotion", "youtube"])
+    now = datetime(2026, 12, 2, 9, 0, tzinfo=TZ)
+    # one main that day -> 18:00, and the 18:00 reel on YT/DM can't share it
+    st = {"baselined": True}
+    items = [_mk("R1", 1, "reel"), _mk("R2", 2, "reel"), _mk("M1", 3, "main")]
+    scheduler.plan(st, items, now)
+    assert _hm(st, "P3:M1", "youtube") == "02 18:00" or _hm(st, "P3:M1", "youtube") == "02 14:00"
+    for p in ("youtube", "dailymotion"):
+        slots = [st["items"][i][p]["slot"] for i in ("P1:R1", "P2:R2", "P3:M1")]
+        assert len(set(slots)) == 3, (p, slots)      # never two videos at the same time on one platform
+    assert "instagram" not in st["items"]["P3:M1"]
+    # main alone -> 18:00
+    st = {"baselined": True}
+    scheduler.plan(st, [_mk("M1", 1, "main")], now)
+    assert _hm(st, "P1:M1", "youtube") == "02 18:00" and _hm(st, "P1:M1", "dailymotion") == "02 18:00"
+    # two mains -> first 14:00, second 18:00
+    st = {"baselined": True}
+    scheduler.plan(st, [_mk("M1", 1, "main"), _mk("M2", 2, "main")], now)
+    assert _hm(st, "P1:M1", "youtube") == "02 14:00" and _hm(st, "P2:M2", "youtube") == "02 18:00"
+    # a reel's 16:9 YouTube version follows the main schedule
+    st = {"baselined": True}
+    scheduler.plan(st, [_mk("R1", 1, "reel", wide=True)], now)
+    assert _hm(st, "P1:R1", "youtube") == "02 18:00" and _hm(st, "P1:R1", "instagram") == "02 18:00"

@@ -6,10 +6,10 @@ GitHub Actions does the rest.
 ## Rules
 | What | Where | When (IST) |
 |---|---|---|
-| Teaser + Reels (9x16) | Instagram, Facebook, Dailymotion, YouTube (Shorts) | 07:30 and 18:00 — max 2 per account per day |
+| Reels (9:16 only) | Instagram, Facebook, Dailymotion, YouTube (Shorts) | 07:00 and 18:00 — max 2 per account per day |
 | Reel 16x9 version (`_16x9_` in name) | YouTube only, as a normal video (replaces the Short) | same slot as the reel |
-| Main video (16x9) | Dailymotion (YouTube later) | 20:00, one per day |
-| Till 29 Nov 2026 | 18:00 is already filled by hand → only 07:30 is used (`RESERVED_SLOTS`) |
+| Main video (16:9, or longer than 2 min) | YouTube + Dailymotion only | one that day → 18:00; two → 14:00 (first) and 18:00 (second) |
+| Till 29 Nov 2026 | 18:00 is already filled by hand → reels use only 07:00, main videos use 14:00 (`RESERVED_SLOTS`) |
 
 * Facebook reels are uploaded ahead and **natively scheduled** by Facebook (10 min – 29 days).
 * Instagram & Dailymotion have no scheduling in their API → the 07:15 / 17:45 / 19:45 runs wait and post on the minute.
@@ -59,7 +59,11 @@ DRY_RUN=1 python -m autopost plan
 ```
 
 ## Long videos
-Any video longer than 2 minutes (Drive duration, `LONG_VIDEO_SECONDS`, default 120) is treated as a long/main video and goes only to YouTube + Dailymotion (main slot 20:00 IST), never to Instagram/Facebook.
+Any video longer than 2 minutes (Drive duration, `LONG_VIDEO_SECONDS`, default 120) is treated as a long/main video and goes only to YouTube + Dailymotion (main slots 14:00 / 18:00 IST), never to Instagram/Facebook.
 
 ## Auto delete
 After every post from a Drive zip/folder is published, `state.json` lists it under `cleanup` with its last post time. A daily Hark job moves it to Drive Trash 30 days later (`DELETE_AFTER_DAYS`).
+
+## Clash rule and daily check
+- Two videos at the same date + time on the same platform → the later one is pushed to its next free slot.
+- The planner runs every hour: any post at a wrong time, a clash, a missed slot or a failed upload is moved/retried automatically, and already-scheduled posts (Facebook, YouTube) are rescheduled on the platform.
