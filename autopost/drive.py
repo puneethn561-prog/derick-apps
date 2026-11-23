@@ -99,6 +99,14 @@ def fill_links(text, links):
     return "\n".join(l for l in (repl_line(x) for x in text.splitlines()) if l is not None)
 
 
+def duration_s(f):
+    """Video length in seconds from Drive's videoMediaMetadata (0 when Drive hasn't processed it)."""
+    try:
+        return int((f.get("videoMediaMetadata") or {}).get("durationMillis") or 0) / 1000
+    except (TypeError, ValueError):
+        return 0
+
+
 def build_items(pkg_id, pkg_name, files, texts):
     """Group package files into items (Teaser, Main, Reel1..)."""
     groups = {}
@@ -123,7 +131,13 @@ def build_items(pkg_id, pkg_name, files, texts):
         vertical = [v for v in g["videos"] if "9x16" in v["name"]]
         wide = [v for v in g["videos"] if "16x9" in v["name"]]
         video_wide = None
-        if vertical or (wide and not key.lower().startswith("main")):
+        # Long video = longer than LONG_VIDEO_SECONDS (2 min): always goes as a main video to YouTube + Dailymotion only.
+        long_vids = [v for v in g["videos"] if duration_s(v) > config.LONG_VIDEO_SECONDS]
+        if long_vids:
+            kind = "main"
+            hd = [v for v in long_vids if "1080" in v["name"]]
+            video = hd[0] if hd else sorted(long_vids, key=lambda v: int(v.get("size") or 0))[0]
+        elif vertical or (wide and (not key.lower().startswith("main") or any(duration_s(v) for v in wide))):
             # reel: 9x16 goes to IG/FB/DM (and YT Shorts); a 16x9 version, if present, goes to YouTube as a normal video
             kind = "reel"
             video = vertical[0] if vertical else wide[0]
@@ -153,7 +167,7 @@ class Drive:
         out, token = [], None
         while True:
             r = self.svc.files().list(q=f"'{parent_id}' in parents and trashed = false",
-                                      fields="nextPageToken, files(id,name,mimeType,size)", pageToken=token,
+                                      fields="nextPageToken, files(id,name,mimeType,size,videoMediaMetadata(durationMillis))", pageToken=token,
                                       pageSize=500, supportsAllDrives=True, includeItemsFromAllDrives=True).execute()
             out += r.get("files", [])
             token = r.get("nextPageToken")

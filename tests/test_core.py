@@ -118,3 +118,14 @@ def test_reel_16x9_goes_to_youtube_variant():
     assert items["Reel1"]["kind"]=="reel" and items["Reel1"]["video"]["id"]=="a" and items["Reel1"]["video_wide"]["id"]=="b"
     assert items["Reel2"]["kind"]=="reel" and items["Reel2"]["video_wide"]["id"]=="c"
     assert items["Main"]["kind"]=="main" and items["Main"]["video_wide"] is None
+
+
+def test_long_video_over_2min_is_main():
+    from autopost import drive
+    files = [
+        {"id": "a", "name": "05_Story_20Nov_9x16_1080.mp4", "videoMediaMetadata": {"durationMillis": "185000"}},
+        {"id": "b", "name": "06_Clip_21Nov_9x16_1080.mp4", "videoMediaMetadata": {"durationMillis": "59000"}},
+    ]
+    items = {i["key"]: i for i in drive.build_items("p", "P", files, {})}
+    assert items["Story"]["kind"] == "main"
+    assert items["Clip"]["kind"] == "reel"

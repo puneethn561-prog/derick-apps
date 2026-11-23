@@ -57,3 +57,6 @@ pip install -r requirements.txt pytest
 python -m pytest tests
 DRY_RUN=1 python -m autopost plan
 ```
+
+## Long videos
+Any video longer than 2 minutes (Drive duration, `LONG_VIDEO_SECONDS`, default 120) is treated as a long/main video and goes only to YouTube + Dailymotion (main slot 20:00 IST), never to Instagram/Facebook.

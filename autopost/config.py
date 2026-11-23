@@ -11,6 +11,9 @@ REEL_SLOTS = [time(7, 30), time(18, 0)]
 # Default: 6 PM is already scheduled manually on every platform up to 29 Nov 2026.
 RESERVED_SLOTS = os.getenv("RESERVED_SLOTS", "2026-11-22..2026-11-29@18:00")
 
+# A video longer than this (seconds) is a long/main video -> YouTube + Dailymotion only, never IG/FB.
+LONG_VIDEO_SECONDS = int(os.getenv("LONG_VIDEO_SECONDS", "120"))
+
 # Main video slot(s): one main video per day.
 MAIN_SLOTS = [time(20, 0)]
 
