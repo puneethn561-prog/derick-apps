@@ -67,7 +67,8 @@ def publish(path, title, description="", tags=None, channel="news", for_kids=Fal
     if _legacy():
         up = requests.get(f"{config.DM_BASE}/file/upload", headers=h).json()["upload_url"]
         data = {"url": _upload_file(path, up), "title": title[:255], "description": description[:3000],
-                "channel": channel, "published": "true", "is_created_for_kids": str(for_kids).lower()}
+                "channel": channel, "published": "true", "is_created_for_kids": str(for_kids).lower(),
+                "stream_altered_with_ai": "true" if config.AI_LABEL else "false"}
         if tags:
             data["tags"] = ",".join(tags)[:150]
         v = requests.post(f"{config.DM_BASE}/me/videos", headers=h, data=data)

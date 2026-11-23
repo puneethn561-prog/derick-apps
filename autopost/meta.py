@@ -23,6 +23,7 @@ def ig_publish_reel(path, caption, share_to_feed=True, thumb_offset_ms=None):
     c = _check(requests.post(f"{GRAPH}/{v}/{uid}/media", data={
         "media_type": "REELS", "upload_type": "resumable", "caption": caption,
         "share_to_feed": str(share_to_feed).lower(), "access_token": tok,
+        "is_ai_generated": "true" if config.AI_LABEL else "false",
         **({"thumb_offset": str(int(thumb_offset_ms))} if thumb_offset_ms else {})}))
     cid = c["id"]
     size = os.path.getsize(path)

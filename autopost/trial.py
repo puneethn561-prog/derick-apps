@@ -121,9 +121,6 @@ def run(drive, now):
                              + (f"cover = video frame at {off / 1000:.1f}s" if off else "cover = first frame"))
             if p == "dailymotion" and it["covers"].get("dailymotion"):
                 warns.append("Dailymotion thumbnail image not set by bot (auto frame)")
-            st = (t.get("settings") or "").lower()
-            if config.AI_LABEL and ("not needed" in st and ("ai label" in st or "synthetic" in st)):
-                warns.append("kit says no AI label, but your rule is AI label ON -> bot will set it ON")
             if p == "youtube" and it["kind"] == "main" and not it["thumbs"]:
                 warns.append("no thumbnail")
             if p == "youtube" and it["kind"] == "reel" and not wide:
