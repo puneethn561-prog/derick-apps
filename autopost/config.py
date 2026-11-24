@@ -52,12 +52,16 @@ DM_BASE = os.getenv("DM_BASE", "https://api.dailymotion.com")
 YT_CLIENT_ID = os.getenv("YT_CLIENT_ID", "")
 YT_CLIENT_SECRET = os.getenv("YT_CLIENT_SECRET", "")
 YT_REFRESH_TOKEN = os.getenv("YT_REFRESH_TOKEN", "")
+# YouTube Data API daily quota (units, resets at midnight Pacific). Default project quota = 10000.
+YT_DAILY_QUOTA = int(os.getenv("YT_DAILY_QUOTA") or "10000")
 
 # GitHub (for the daily "pin these comments" checklist issue)
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "")
 GITHUB_REPOSITORY = os.getenv("GITHUB_REPOSITORY", "")
 
 STATE_PATH = os.getenv("STATE_PATH", "state/state.json")
+# "preview" mode writes the next 7 days of planned posts here (same folder as the state file).
+PREVIEW_PATH = os.getenv("PREVIEW_PATH") or os.path.join(os.path.dirname(STATE_PATH) or ".", "preview.json")
 AI_LABEL = os.getenv("AI_LABEL", "1") == "1"   # your videos are AI-assisted -> disclose
 DRY_RUN = os.getenv("DRY_RUN", "0") == "1"
 WORKDIR = os.getenv("AUTOPOST_WORKDIR", "/tmp/autopost")

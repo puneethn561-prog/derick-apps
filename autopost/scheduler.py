@@ -109,9 +109,11 @@ def plan(state, items, now):
         for p in platforms_for(item):
             want = item["text"][p].get("schedule")
             cur = rec.get(p) or {}
-            if not want or cur.get("status") == "published":
+            if not want or cur.get("status") in ("published", "held"):
                 continue
             wdt = datetime.fromisoformat(want)
+            if cur.get("not_before") and wdt < datetime.fromisoformat(cur["not_before"]):
+                continue   # moved off its fixed time (YouTube quota) -> keep the new slot
             if wdt < now - timedelta(minutes=config.MISSED_AFTER_MIN):
                 if cur.get("fixed"):
                     cur.pop("fixed", None)
@@ -147,7 +149,8 @@ def plan(state, items, now):
             cur = rec.get(p) or {}
             cur["track"] = kind
             status = cur.get("status")
-            if status == "published" or (cur.get("fixed") and status != "failed"):
+            if status in ("published", "held") or (cur.get("fixed") and status != "failed"):
+                rec[p] = cur
                 continue
             slot = datetime.fromisoformat(cur["slot"]) if cur.get("slot") else None
             reason = None
@@ -166,7 +169,10 @@ def plan(state, items, now):
             if not reason:
                 continue
             lead = timedelta(minutes=config.FB_MIN_LEAD_MIN + 5 if p == "facebook" else 5)
-            new = next_free_slot(taken_slots(state, p, kind, exclude=item["id"]), now + lead, kind)
+            after = now + lead
+            if cur.get("not_before"):
+                after = max(after, datetime.fromisoformat(cur["not_before"]))
+            new = next_free_slot(taken_slots(state, p, kind, exclude=item["id"]), after, kind)
             was_scheduled = status == "scheduled" and cur.get("id")
             cur.pop("slot_key", None)
             cur.pop("fixed", None)
@@ -224,6 +230,18 @@ def _tidy_main(state, ordered, now):
                     notes.append(f"{recs[a]['name']} [{p}] -> {t14:%a %d %b %H:%M} (first main video that day)")
                     notes.append(f"{recs[b]['name']} [{p}] -> {t18:%a %d %b %H:%M} (second main video that day)")
     return notes
+
+
+def defer(state, iid, platform, after, reason="quota"):
+    """Move one post to the next free slot of its track after `after` (e.g. the YouTube quota reset).
+    It keeps that slot: the planner won't pull it back before `not_before`."""
+    cur = state["items"][iid][platform]
+    kind = rec_track(state["items"][iid], platform)
+    new = next_free_slot(taken_slots(state, platform, kind, exclude=iid), after, kind)
+    for k in ("slot_key", "fixed", "error"):
+        cur.pop(k, None)
+    cur.update({"slot": new.isoformat(), "status": "queued", "not_before": after.isoformat(), "deferred": reason})
+    return new
 
 
 def baseline(state, items):

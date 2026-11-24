@@ -6,10 +6,11 @@ on:
     - cron: "15 1 * * *"     # 06:45 IST -> 07:00 reel slot
     - cron: "15 8 * * *"     # 13:45 IST -> 14:00 main video slot (2nd main video of the day)
     - cron: "15 12 * * *"    # 17:45 IST -> 18:00 reel slot + main video slot
+    - cron: "30 14 * * 0"    # Sunday 20:00 IST -> weekly report
   workflow_dispatch:
     inputs:
       mode:
-        description: "plan | slot | baseline | check | trial"
+        description: "plan | slot | baseline | check | trial | audit | weekly | preview"
         default: plan
       dry_run:
         description: "1 = only print what would be posted"
@@ -43,6 +44,7 @@ jobs:
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then echo "mode=${{ inputs.mode }}" >> $GITHUB_OUTPUT;
           elif [ "${{ github.event.schedule }}" = "50 * * * *" ]; then echo "mode=plan" >> $GITHUB_OUTPUT;
+          elif [ "${{ github.event.schedule }}" = "30 14 * * 0" ]; then echo "mode=weekly" >> $GITHUB_OUTPUT;
           else echo "mode=slot" >> $GITHUB_OUTPUT; fi
       - name: Run
         env:
@@ -62,6 +64,7 @@ jobs:
           YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
           YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
           YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
+          YT_DAILY_QUOTA: ${{ vars.YT_DAILY_QUOTA }}
           RESERVED_SLOTS: ${{ vars.RESERVED_SLOTS || '2026-11-22..2026-11-29@18:00' }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: python -m autopost "${{ steps.mode.outputs.mode }}"

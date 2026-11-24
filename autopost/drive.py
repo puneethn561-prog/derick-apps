@@ -8,7 +8,7 @@ A package folder looks like (Chivari Bussu EP2 - Upload Package):
   02_Main_12Nov_4K.mp4                        <- main video (16:9)
   03_Reel1_13Nov_9x16_1080.mp4
   03_Reel1_13Nov_16x9_1080.mp4                <- optional 16:9 reel -> YouTube (normal video, not Short)
-  03_Reel1_13Nov_Cover_ig_9x16.jpg / _fb_ / _yt_
+  03_Reel1_13Nov_Cover_ig_9x16.jpg / _fb_ / _yt_ / _dm_   (_dm_ -> Dailymotion thumbnail)
   02_Main_12Nov_Thumb_A.jpg ...
 
 DRIVE_ROOT_ID = a folder that holds package folders (every subfolder with 00_Text_*.md is a package),
@@ -150,7 +150,7 @@ def build_items(pkg_id, pkg_name, files, texts):
             g["videos"].append(f)
         elif low.startswith("cover_"):
             plat = low.split("_")[1]
-            g["covers"][{"ig": "instagram", "fb": "facebook", "yt": "youtube"}.get(plat, plat)] = f
+            g["covers"][{"ig": "instagram", "fb": "facebook", "yt": "youtube", "dm": "dailymotion"}.get(plat, plat)] = f
         elif low.startswith("thumb_"):
             g["thumbs"].append(f)
     items = []

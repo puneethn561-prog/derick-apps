@@ -10,8 +10,15 @@ import time
 import requests
 
 from . import config
+from .quota import QuotaExceeded, is_quota_error
 
 _tok = {"value": None, "exp": 0}
+
+
+def _fail(what, r):
+    """Raise QuotaExceeded for a quota error (the caller moves the post), else RuntimeError."""
+    msg = f"YouTube {what} {r.status_code}: {r.text[:300]}"
+    raise (QuotaExceeded if is_quota_error(r.text) else RuntimeError)(msg)
 API = "https://www.googleapis.com/youtube/v3"
 
 
@@ -48,11 +55,11 @@ def upload(path, title, description="", tags=None, short=False, publish_at=None)
                                   "X-Upload-Content-Type": "video/mp4", "X-Upload-Content-Length": str(size)},
                          data=json.dumps(body))
     if init.status_code >= 400:
-        raise RuntimeError(f"YouTube init {init.status_code}: {init.text[:300]}")
+        _fail("init", init)
     with open(path, "rb") as fh:
         r = requests.put(init.headers["Location"], headers={**h, "Content-Type": "video/mp4"}, data=fh, timeout=7200)
     if r.status_code >= 400:
-        raise RuntimeError(f"YouTube upload {r.status_code}: {r.text[:300]}")
+        _fail("upload", r)
     return r.json()["id"]
 
 
@@ -62,7 +69,7 @@ def set_thumbnail(video_id, image_path):
                           params={"videoId": video_id}, headers={"Authorization": f"Bearer {_auth()}",
                                                                  "Content-Type": "image/jpeg"}, data=fh)
     if r.status_code >= 400:
-        raise RuntimeError(f"YouTube thumbnail {r.status_code}: {r.text[:300]}")
+        _fail("thumbnail", r)
 
 
 def comment(video_id, text):
@@ -70,5 +77,16 @@ def comment(video_id, text):
     r = requests.post(f"{API}/commentThreads", params={"part": "snippet"},
                       headers={"Authorization": f"Bearer {_auth()}"}, json=body)
     if r.status_code >= 400:
-        raise RuntimeError(f"YouTube comment {r.status_code}: {r.text[:300]}")
+        _fail("comment", r)
     return r.json()["id"]
+
+
+def stats(video_ids):
+    """{video_id: viewCount} for up to 50 ids in one videos.list call (1 quota unit)."""
+    if not video_ids:
+        return {}
+    r = requests.get(f"{API}/videos", params={"part": "statistics", "id": ",".join(video_ids[:50])},
+                     headers={"Authorization": f"Bearer {_auth()}"})
+    if r.status_code >= 400:
+        _fail("stats", r)
+    return {v["id"]: int(v.get("statistics", {}).get("viewCount", 0)) for v in r.json().get("items", [])}

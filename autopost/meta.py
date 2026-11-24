@@ -109,3 +109,23 @@ def fb_set_thumbnail(video_id, image_path):
         _check(requests.post(f"{GRAPH}/{config.META_API}/{video_id}/thumbnails",
                              data={"is_preferred": "true", "access_token": config.FB_PAGE_TOKEN},
                              files={"source": fh}))
+
+
+# ---------------- simple view counts (weekly report, best effort) ----------------
+def _first_value(j):
+    d = (j.get("data") or [{}])[0]
+    vals = d.get("values") or [{}]
+    return int(vals[0].get("value") or d.get("total_value", {}).get("value") or 0)
+
+
+def ig_views(media_id):
+    """Instagram media insight `views` (needs instagram_manage_insights)."""
+    return _first_value(_check(requests.get(f"{GRAPH}/{config.META_API}/{media_id}/insights",
+                                            params={"metric": "views", "access_token": config.IG_TOKEN})))
+
+
+def fb_reel_views(video_id):
+    """Facebook Reel plays (`blue_reels_play_count`, needs read_insights)."""
+    return _first_value(_check(requests.get(f"{GRAPH}/{config.META_API}/{video_id}/video_insights",
+                                            params={"metric": "blue_reels_play_count",
+                                                    "access_token": config.FB_PAGE_TOKEN})))

@@ -90,3 +90,34 @@ def publish(path, title, description="", tags=None, channel="news", for_kids=Fal
         raise RuntimeError(f"Dailymotion create {v.status_code}: {v.text[:300]}")
     j = v.json()
     return j.get("video_id") or j.get("id")
+
+
+def set_thumbnail(video_id, image_path, vertical=False):
+    """Custom thumbnail: upload the image to a Dailymotion upload URL, then write the returned URL to the
+    video's `thumbnail_url` (landscape) or `vertical_thumbnail_url` (portrait) field. These fields exist only
+    in the Legacy API (POST /video/<id>); API v2's PATCH /v2/videos/<id> has no thumbnail field (Nov 2026)."""
+    h = {"Authorization": f"Bearer {_auth()}"}
+    if _legacy():
+        up = requests.get(f"{config.DM_BASE}/file/upload", headers=h)
+    else:
+        up = requests.post(f"{config.DM_BASE}/v2/files/upload_sessions", headers=h)
+    if up.status_code >= 400:
+        raise RuntimeError(f"Dailymotion thumbnail upload url {up.status_code}: {up.text[:300]}")
+    url = _upload_file(image_path, up.json()["upload_url"])
+    field = "vertical_thumbnail_url" if vertical else "thumbnail_url"
+    r = requests.post(f"{config.DM_BASE}/video/{video_id}", headers=h, data={field: url})
+    if r.status_code >= 400:
+        raise RuntimeError(f"Dailymotion thumbnail {r.status_code}: {r.text[:300]}")
+    return field
+
+
+def views(video_ids):
+    """{video_id: views_total} from the public Legacy API (no login, one call). Best effort: views_total
+    still answers on api.dailymotion.com but is no longer listed in the docs; API v2 has no view counts."""
+    if not video_ids:
+        return {}
+    r = requests.get(f"{config.DM_BASE}/videos", params={"ids": ",".join(video_ids[:100]),
+                                                          "fields": "id,views_total", "limit": 100})
+    if r.status_code >= 400:
+        raise RuntimeError(f"Dailymotion views {r.status_code}: {r.text[:200]}")
+    return {v["id"]: int(v.get("views_total") or 0) for v in r.json().get("list", [])}

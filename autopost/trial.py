@@ -107,6 +107,7 @@ def run(drive, now):
             wide = it.get("video_wide") if p == "youtube" else None
             v = probes[(wide or it["video"])["id"]]
             errs, warns = check_text(p, t, it["kind"])
+            info = []
             if "err" in v:
                 errs.append("video download failed: " + v["err"])
             else:
@@ -119,8 +120,12 @@ def run(drive, now):
                 off = t.get("thumb_offset_ms") or (it["text"].get("youtube") or {}).get("thumb_offset_ms")
                 warns.append("Instagram API can't take a cover image file; "
                              + (f"cover = video frame at {off / 1000:.1f}s" if off else "cover = first frame"))
-            if p == "dailymotion" and it["covers"].get("dailymotion"):
-                warns.append("Dailymotion thumbnail image not set by bot (auto frame)")
+            if p == "dailymotion":
+                dm_thumb = it["covers"].get("dailymotion") or ((it.get("thumbs") or [None])[0] if it["kind"] == "main" else None)
+                if dm_thumb:
+                    info.append(f"bot sets the Dailymotion thumbnail after upload from {dm_thumb['name']}")
+                else:
+                    warns.append("no Dailymotion thumbnail in kit (Cover_dm_ / Thumb_) - Dailymotion picks a frame")
             if p == "youtube" and it["kind"] == "main" and not it["thumbs"]:
                 warns.append("no thumbnail")
             if p == "youtube" and it["kind"] == "reel" and not wide:
@@ -135,6 +140,8 @@ def run(drive, now):
                 print(f"     ERROR {e}")
             for w in warns:
                 print(f"     warn  {w}")
+            for i in info:
+                print(f"     info  {i}")
             total_err += len(errs)
     for n in notes:
         print("plan: " + n)
