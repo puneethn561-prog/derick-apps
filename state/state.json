@@ -1,5 +1,11 @@
 {
+  "auth_checked": "2026-11-24",
   "baselined": true,
+  "check_seen": [],
   "cleanup": {},
-  "items": {}
+  "items": {},
+  "yt_quota": {
+    "day": "2026-11-23",
+    "used": 1
+  }
 }
