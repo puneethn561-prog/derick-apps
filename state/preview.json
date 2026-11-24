@@ -1,0 +1,45 @@
+{
+  "generated_at": "2026-11-24T10:32+05:30",
+  "timezone": "Asia/Kolkata",
+  "days": 7,
+  "rows": [],
+  "reserved": [
+    {
+      "date": "2026-11-24",
+      "time_ist": "18:00",
+      "platform": "all",
+      "note": "filled by hand (RESERVED_SLOTS)"
+    },
+    {
+      "date": "2026-11-25",
+      "time_ist": "18:00",
+      "platform": "all",
+      "note": "filled by hand (RESERVED_SLOTS)"
+    },
+    {
+      "date": "2026-11-26",
+      "time_ist": "18:00",
+      "platform": "all",
+      "note": "filled by hand (RESERVED_SLOTS)"
+    },
+    {
+      "date": "2026-11-27",
+      "time_ist": "18:00",
+      "platform": "all",
+      "note": "filled by hand (RESERVED_SLOTS)"
+    },
+    {
+      "date": "2026-11-28",
+      "time_ist": "18:00",
+      "platform": "all",
+      "note": "filled by hand (RESERVED_SLOTS)"
+    },
+    {
+      "date": "2026-11-29",
+      "time_ist": "18:00",
+      "platform": "all",
+      "note": "filled by hand (RESERVED_SLOTS)"
+    }
+  ],
+  "planner_notes": []
+}
