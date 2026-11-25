@@ -58,6 +58,34 @@
         "status": "deleted",
         "track": "reel"
       }
+    },
+    "1ScexQ01qLYgF0jwpk9oAAEzXRK_JbhzJ::Doctor-Doom-Reel:DoctorDoomReelDoctorDoomReel": {
+      "dailymotion": {
+        "needs_reschedule": false,
+        "slot": "2026-11-26T07:00:00+05:30",
+        "status": "queued",
+        "track": "reel"
+      },
+      "facebook": {
+        "id": "1134055612750661",
+        "needs_reschedule": false,
+        "slot": "2026-11-26T07:00:00+05:30",
+        "status": "scheduled",
+        "track": "reel"
+      },
+      "instagram": {
+        "needs_reschedule": false,
+        "slot": "2026-11-26T07:00:00+05:30",
+        "status": "queued",
+        "track": "reel"
+      },
+      "kind": "reel",
+      "name": "Doctor-Doom-Reel/Doctor-Doom-Reel / DoctorDoomReelDoctorDoomReel",
+      "youtube": {
+        "note": "YouTube off until API audit",
+        "status": "off",
+        "track": "reel"
+      }
     }
   },
   "yt_quota": {
