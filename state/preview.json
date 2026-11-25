@@ -1,15 +1,50 @@
 {
-  "generated_at": "2026-11-24T10:32+05:30",
+  "generated_at": "2026-11-25T12:43+05:30",
   "timezone": "Asia/Kolkata",
   "days": 7,
-  "rows": [],
-  "reserved": [
+  "rows": [
     {
-      "date": "2026-11-24",
-      "time_ist": "18:00",
-      "platform": "all",
-      "note": "filled by hand (RESERVED_SLOTS)"
+      "date": "2026-11-26",
+      "time_ist": "07:00",
+      "platform": "dailymotion",
+      "title": "1 in 3 Gamers Were Ready to Skip Work for GTA 6 – Offices Went Empty!",
+      "item": "03-gta6-skipwork-upload-pack / REEL 03 — GTA 6 SKIP WORK",
+      "kind": "reel",
+      "status": "queued",
+      "note": ""
     },
+    {
+      "date": "2026-11-26",
+      "time_ist": "07:00",
+      "platform": "facebook",
+      "title": "1 in 3 gamers were ready to skip work for ONE game 😳🎮",
+      "item": "03-gta6-skipwork-upload-pack / REEL 03 — GTA 6 SKIP WORK",
+      "kind": "reel",
+      "status": "queued",
+      "note": ""
+    },
+    {
+      "date": "2026-11-26",
+      "time_ist": "07:00",
+      "platform": "instagram",
+      "title": "1 in 3 gamers were ready to SKIP WORK for one game 😳🎮",
+      "item": "03-gta6-skipwork-upload-pack / REEL 03 — GTA 6 SKIP WORK",
+      "kind": "reel",
+      "status": "queued",
+      "note": ""
+    },
+    {
+      "date": "2026-11-26",
+      "time_ist": "07:00",
+      "platform": "youtube",
+      "title": "1 in 3 Gamers Were Ready to Skip Work for GTA 6 😳 #shorts",
+      "item": "03-gta6-skipwork-upload-pack / REEL 03 — GTA 6 SKIP WORK",
+      "kind": "reel",
+      "status": "queued",
+      "note": ""
+    }
+  ],
+  "reserved": [
     {
       "date": "2026-11-25",
       "time_ist": "18:00",
@@ -41,5 +76,10 @@
       "note": "filled by hand (RESERVED_SLOTS)"
     }
   ],
-  "planner_notes": []
+  "planner_notes": [
+    "03-gta6-skipwork-upload-pack / REEL 03 — GTA 6 SKIP WORK [instagram] -> Thu 26 Nov 07:00 (new)",
+    "03-gta6-skipwork-upload-pack / REEL 03 — GTA 6 SKIP WORK [facebook] -> Thu 26 Nov 07:00 (new)",
+    "03-gta6-skipwork-upload-pack / REEL 03 — GTA 6 SKIP WORK [dailymotion] -> Thu 26 Nov 07:00 (new)",
+    "03-gta6-skipwork-upload-pack / REEL 03 — GTA 6 SKIP WORK [youtube] -> Thu 26 Nov 07:00 (new)"
+  ]
 }
