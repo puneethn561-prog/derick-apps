@@ -63,6 +63,9 @@ def _upload_file(path, upload_url):
 
 
 def publish(path, title, description="", tags=None, channel="news", for_kids=False):
+    if not _legacy():
+        # API v2 (private key) has no thumbnail field (PATCH /v2/videos, checked 25 Nov 2026) -> Dailymotion picks a frame
+        return False
     h = {"Authorization": f"Bearer {_auth()}"}
     if _legacy():
         up = requests.get(f"{config.DM_BASE}/file/upload", headers=h).json()["upload_url"]
@@ -81,7 +84,8 @@ def publish(path, title, description="", tags=None, channel="news", for_kids=Fal
         raise RuntimeError(f"Dailymotion upload session {sess.status_code}: {sess.text[:300]}")
     file_url = _upload_file(path, sess.json()["upload_url"])
     body = {"title": title[:255], "description": description[:3000], "category": channel,
-            "visibility": "public", "is_for_kids": bool(for_kids), "source": {"file_url": file_url}}
+            "visibility": "public", "is_for_kids": bool(for_kids), "source": {"file_url": file_url},
+            "is_ai_altered": bool(config.AI_LABEL)}
     if tags:
         body["tags"] = [t[:50] for t in tags][:20]
     pid = _profile_id(h)
