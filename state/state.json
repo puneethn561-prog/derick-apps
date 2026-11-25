@@ -22,7 +22,7 @@
         "published_at": "2026-11-25T13:10:07.949191+05:30",
         "slot": "2026-11-25T13:10:00+05:30",
         "slot_key": "2026-11-25T18:00:00+05:30",
-        "status": "published",
+        "status": "deleted",
         "track": "reel"
       },
       "facebook": {
@@ -31,10 +31,11 @@
         "needs_reschedule": false,
         "slot": "2026-11-25T13:10:00+05:30",
         "slot_key": "2026-11-25T18:00:00+05:30",
-        "status": "scheduled",
+        "status": "deleted",
         "track": "reel"
       },
       "instagram": {
+        "delete_error": "Meta delete 400: {\"error\":{\"message\":\"(#10) Insufficient permissions to access this data\",\"code\":10,\"type\":\"OAuthException\",\"fbtrace_id\":\"AOtFgScTaQLq1nSDhM3KOVL\"}}",
         "fixed": true,
         "id": "18133758277751079",
         "needs_reschedule": false,
@@ -46,6 +47,7 @@
       },
       "kind": "reel",
       "name": "03-gta6-skipwork-upload-pack / REEL 03 — GTA 6 SKIP WORK",
+      "skip": true,
       "youtube": {
         "fixed": true,
         "id": "-hUj2bmK_x4",
@@ -53,7 +55,7 @@
         "published_at": "2026-11-25T13:10:44.350391+05:30",
         "slot": "2026-11-25T13:10:00+05:30",
         "slot_key": "2026-11-25T18:00:00+05:30",
-        "status": "published",
+        "status": "deleted",
         "track": "reel"
       }
     }
