@@ -1,11 +1,65 @@
 {
+  "alerts_log": [
+    {
+      "error": "Dailymotion thumbnail 401: {\"error\":{\"more_info\":\"https:\\/\\/developer.dailymotion.com\\/api#error-codes\",\"code\":401,\"message\":\"V2 tokens require valid V2 authentication.\",\"type\":\"invalid_parameter\",\"error_data\":{\"reason\":\"invalid_token\"}}}",
+      "hint": "Permission / login problem on this platform.",
+      "item": "03-gta6-skipwork-upload-pack / REEL 03 — GTA 6 SKIP WORK",
+      "platform": "dailymotion",
+      "time": "2026-11-25T13:10+05:30",
+      "what": "thumbnail"
+    }
+  ],
   "auth_checked": "2026-11-25",
   "baselined": true,
   "check_seen": [],
   "cleanup": {},
-  "items": {},
+  "items": {
+    "1Ae9y14v28rvis8YrbJUskolo0FOi02jj:::REEL03GTA6SKIPWORK": {
+      "dailymotion": {
+        "fixed": true,
+        "id": "xbzpfnq",
+        "needs_reschedule": false,
+        "published_at": "2026-11-25T13:10:07.949191+05:30",
+        "slot": "2026-11-25T13:10:00+05:30",
+        "slot_key": "2026-11-25T18:00:00+05:30",
+        "status": "published",
+        "track": "reel"
+      },
+      "facebook": {
+        "fixed": true,
+        "id": "1666936368549612",
+        "needs_reschedule": false,
+        "slot": "2026-11-25T13:10:00+05:30",
+        "slot_key": "2026-11-25T18:00:00+05:30",
+        "status": "scheduled",
+        "track": "reel"
+      },
+      "instagram": {
+        "fixed": true,
+        "id": "18133758277751079",
+        "needs_reschedule": false,
+        "published_at": "2026-11-25T13:10:40.434708+05:30",
+        "slot": "2026-11-25T13:10:00+05:30",
+        "slot_key": "2026-11-25T18:00:00+05:30",
+        "status": "published",
+        "track": "reel"
+      },
+      "kind": "reel",
+      "name": "03-gta6-skipwork-upload-pack / REEL 03 — GTA 6 SKIP WORK",
+      "youtube": {
+        "fixed": true,
+        "id": "-hUj2bmK_x4",
+        "needs_reschedule": false,
+        "published_at": "2026-11-25T13:10:44.350391+05:30",
+        "slot": "2026-11-25T13:10:00+05:30",
+        "slot_key": "2026-11-25T18:00:00+05:30",
+        "status": "published",
+        "track": "reel"
+      }
+    }
+  },
   "yt_quota": {
     "day": "2026-11-24",
-    "used": 1
+    "used": 1651
   }
 }
