@@ -53,6 +53,9 @@ YT_CLIENT_ID = os.getenv("YT_CLIENT_ID", "")
 YT_CLIENT_SECRET = os.getenv("YT_CLIENT_SECRET", "")
 YT_REFRESH_TOKEN = os.getenv("YT_REFRESH_TOKEN", "")
 # YouTube Data API daily quota (units, resets at midnight Pacific). Default project quota = 10000.
+# YouTube uploads stay off until Google's API audit is approved (repo variable YT_ENABLED=1 turns them on).
+# Videos planned while it is off are never back-filled to YouTube.
+YT_ENABLED = os.getenv("YT_ENABLED", "1") == "1"
 YT_DAILY_QUOTA = int(os.getenv("YT_DAILY_QUOTA") or "10000")
 
 # GitHub (for the daily "pin these comments" checklist issue)

@@ -212,7 +212,7 @@ def update_cleanup(state):
             r = rec.get(p)
             if not isinstance(r, dict):
                 continue
-            if r.get("status") != "published":
+            if r.get("status") not in ("published", "off", "deleted"):
                 d["done"] = False
             elif r.get("slot") and (d["last"] is None or r["slot"] > d["last"]):
                 d["last"] = r["slot"]

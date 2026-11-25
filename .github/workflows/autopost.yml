@@ -65,6 +65,7 @@ jobs:
           DM_USERNAME: ${{ secrets.DM_USERNAME }}
           DM_PASSWORD: ${{ secrets.DM_PASSWORD }}
           DM_PROFILE_ID: ${{ vars.DM_PROFILE_ID }}
+          YT_ENABLED: ${{ vars.YT_ENABLED || '1' }}
           YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
           YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
           YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}

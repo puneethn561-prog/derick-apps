@@ -47,7 +47,7 @@ That post goes out at exactly that time (IST) on that platform. Whatever was pla
 Facebook schedules natively to the minute; Instagram/Dailymotion/YouTube are posted by the hourly run. Packages are processed in folder-name order.
 
 ## One-time setup (repo → Settings → Secrets and variables → Actions)
-**Variables:** `DRIVE_ROOT_ID`, `FB_PAGE_ID`, `IG_USER_ID`  (optional `RESERVED_SLOTS`, `DRY_RUN=1` for testing)
+**Variables:** `DRIVE_ROOT_ID`, `FB_PAGE_ID`, `IG_USER_ID`  (optional `RESERVED_SLOTS`, `DRY_RUN=1` for testing, `YT_ENABLED=0` keeps YouTube off until the API audit is approved; videos planned while off are not back-filled)
 **Secrets:**
 | Secret | How to get it |
 |---|---|

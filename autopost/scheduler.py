@@ -107,6 +107,11 @@ def plan(state, items, now):
         if rec.get("skip"):
             continue
         for p in platforms_for(item):
+            if p == "youtube" and not config.YT_ENABLED and not (rec.get(p) or {}).get("id"):
+                rec[p] = {"status": "off", "track": track(item, p), "note": "YouTube off until API audit"}
+                continue
+            if (rec.get(p) or {}).get("status") == "off":
+                continue
             want = item["text"][p].get("schedule")
             cur = rec.get(p) or {}
             if not want or cur.get("status") in ("published", "held"):
@@ -145,6 +150,11 @@ def plan(state, items, now):
         if rec.get("skip"):
             continue
         for p in platforms_for(item):
+            if p == "youtube" and not config.YT_ENABLED and not (rec.get(p) or {}).get("id"):
+                rec[p] = {"status": "off", "track": track(item, p), "note": "YouTube off until API audit"}
+                continue
+            if (rec.get(p) or {}).get("status") == "off":
+                continue
             kind = track(item, p)
             cur = rec.get(p) or {}
             cur["track"] = kind
