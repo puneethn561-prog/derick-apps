@@ -10,11 +10,14 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: "plan | slot | baseline | check | trial | audit | weekly | preview"
+        description: "plan | slot | baseline | check | trial | audit | weekly | preview | unpost"
         default: plan
       dry_run:
         description: "1 = only print what would be posted"
         default: "0"
+      match:
+        description: "unpost only: text in the item name to delete from all platforms"
+        default: ""
       drive_root:
         description: "trial only: Drive folder id to test (nothing is posted)"
         default: ""
@@ -51,6 +54,7 @@ jobs:
           DRY_RUN: ${{ inputs.mode == 'trial' && '1' || inputs.dry_run || vars.DRY_RUN || '0' }}
           DRIVE_ROOT_ID: ${{ inputs.mode == 'trial' && inputs.drive_root || vars.DRIVE_ROOT_ID }}
           STATE_PATH: ${{ inputs.mode == 'trial' && '/tmp/trial/state.json' || 'state/state.json' }}
+          UNPOST_MATCH: ${{ inputs.match }}
           GDRIVE_SA_JSON: ${{ secrets.GDRIVE_SA_JSON }}
           FB_PAGE_ID: ${{ vars.FB_PAGE_ID }}
           FB_PAGE_TOKEN: ${{ secrets.FB_PAGE_TOKEN }}

@@ -340,6 +340,9 @@ def main(argv):
     if mode == "audit":
         run_audit(state)
         return 0
+    if mode == "unpost":
+        from . import unpost
+        return 0 if unpost.run(state, log) else 1
     if mode == "weekly":
         from . import weekly
         weekly.run(state, now())
