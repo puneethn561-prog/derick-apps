@@ -17,10 +17,26 @@ def _check(r):
 
 
 # ---------------- Instagram ----------------
-def ig_publish_reel(path, caption, share_to_feed=True, thumb_offset_ms=None):
-    """Upload + publish now. Instagram's API has no scheduling, so call this at slot time."""
+def public_image_url(image_path):
+    """Instagram's cover_url needs a public https image. Upload it to the Page as an unpublished photo
+    (not shown on the Page) and return its fbcdn URL."""
+    v, page = config.META_API, config.FB_PAGE_ID
+    with open(image_path, "rb") as fh:
+        ph = _check(requests.post(f"{GRAPH}/{v}/{page}/photos", data={"published": "false",
+                                  "access_token": config.FB_PAGE_TOKEN}, files={"source": fh}))
+    j = _check(requests.get(f"{GRAPH}/{v}/{ph['id']}", params={"fields": "images", "access_token": config.FB_PAGE_TOKEN}))
+    imgs = sorted(j.get("images", []), key=lambda i: i.get("width", 0), reverse=True)
+    if not imgs:
+        raise RuntimeError("no image url for IG cover")
+    return imgs[0]["source"]
+
+
+def ig_publish_reel(path, caption, share_to_feed=True, thumb_offset_ms=None, cover_url=None):
+    """Upload + publish now. Instagram's API has no scheduling, so call this at slot time.
+    cover_url (public image) sets the reel cover; else thumb_offset picks a frame."""
     v, tok, uid = config.META_API, config.IG_TOKEN, config.IG_USER_ID
     c = _check(requests.post(f"{GRAPH}/{v}/{uid}/media", data={
+        **({"cover_url": cover_url} if cover_url else {}),
         "media_type": "REELS", "upload_type": "resumable", "caption": caption,
         "share_to_feed": str(share_to_feed).lower(), "access_token": tok,
         "is_ai_generated": "true" if config.AI_LABEL else "false",

@@ -49,7 +49,14 @@ def publish(drive, item, platform, rec, state, slot=None):
     wide = item.get("video_wide") if platform == "youtube" else None
     path = drive.download(wide or item["video"])
     if platform == "instagram":
-        return meta.ig_publish_reel(path, t["caption"], thumb_offset_ms=t.get("thumb_offset_ms") or (item["text"].get("youtube") or {}).get("thumb_offset_ms"))
+        cover_url = None
+        cover = item["covers"].get("instagram") or item["covers"].get("facebook")
+        if cover:
+            try:
+                cover_url = meta.public_image_url(drive.download(cover))
+            except Exception as e:  # cover is nice-to-have: post with a frame instead, alert
+                alerts.record("instagram", item["name"], "cover", e, state)
+        return meta.ig_publish_reel(path, t["caption"], cover_url=cover_url, thumb_offset_ms=t.get("thumb_offset_ms") or (item["text"].get("youtube") or {}).get("thumb_offset_ms"))
     if platform == "facebook":
         vid = meta.fb_upload_reel(path, t["caption"], publish_at=slot, title=t.get("title"))
         cover = item["covers"].get("facebook")
