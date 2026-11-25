@@ -3,6 +3,14 @@
 Drop an **Upload Package** folder (same format as *Chivari Bussu EP2 - Upload Package*) into the Drive auto-upload folder.
 GitHub Actions does the rest.
 
+## Upload kit: any file type works
+
+Put the video, the cover pictures and ONE kit file in a folder or a zip inside the Upload Kit folder.
+The kit file can be **.txt, .md, .pdf, .docx, .odt, .rtf, .html, .json or a Google Doc**.
+Write a heading per platform (YouTube / Instagram / Facebook / Dailymotion) and under it `Title:`, `Description:` or `Caption:`,
+`Tags:`, `Hashtags:`. An `Upload time:` / `Schedule:` line sets the time; a time already past goes to the next free slot.
+A picture with `16x9` in its name is used as the Dailymotion thumbnail; the vertical one for the others.
+
 ## Rules
 | What | Where | When (IST) |
 |---|---|---|

@@ -13,7 +13,7 @@ A package folder looks like (Chivari Bussu EP2 - Upload Package):
 
 DRIVE_ROOT_ID = a folder that holds package folders (every subfolder with 00_Text_*.md is a package),
 or one package folder itself. A .zip file in the root (or in a package folder) is opened in place:
-every folder inside the zip that holds 00_Text_*.md files is a package. Only the zip's index and text
+every folder inside the zip that holds 00_Text_*.md files, or any kit file (pdf, txt, docx, md, rtf, html, json), is a package. Only the zip's index and text
 files are read on each run (HTTP range requests); a video is extracted only when it is posted, and its
 length is measured once and cached in state/durations.json.
 """
@@ -183,7 +183,7 @@ def build_items(pkg_id, pkg_name, files, texts):
 
 
 def build_kit_item(pkg_id, pkg_name, files, kit):
-    """One video + thumbnail + UPLOAD KIT pdf -> one item. Kind by length (> 2 min = long video)."""
+    """One video + thumbnail + an upload kit (pdf/txt/docx/md/Google Doc...) -> one item. Kind by length (> 2 min = long video)."""
     vids = [f for f in files if f["name"].lower().endswith((".mp4", ".mov", ".m4v"))]
     if not vids:
         return []
@@ -191,7 +191,11 @@ def build_kit_item(pkg_id, pkg_name, files, kit):
     main_v = [v for v in vids if v not in wide] or vids
     video = main_v[0]
     imgs = [f for f in files if f["name"].lower().endswith((".jpg", ".jpeg", ".png"))]
-    thumb = ([i for i in imgs if "thumb" in i["name"].lower() or "cover" in i["name"].lower()] or imgs or [None])[0]
+    named = [i for i in imgs if "thumb" in i["name"].lower() or "cover" in i["name"].lower()] or imgs
+    wide_i = [i for i in named if re.search(r"16x9|16_9|horizontal|landscape|wide", i["name"], re.I)]
+    tall_i = [i for i in named if i not in wide_i]
+    thumb = (tall_i or named or [None])[0]
+    dm_thumb = (wide_i or [thumb])[0]
     # 16:9-only package or > 2 min -> main video (YouTube + Dailymotion only)
     long_v = duration_s(video) > config.LONG_VIDEO_SECONDS or is_wide(video)
     text = {p: v for p, v in kit.items() if not p.startswith("_")}
@@ -199,7 +203,7 @@ def build_kit_item(pkg_id, pkg_name, files, kit):
     return [{"id": f"{pkg_id}:{key}", "name": f"{pkg_name} / {kit.get('_name') or key}", "key": key,
              "kind": "main" if long_v else "reel", "order": 1, "video": video,
              "video_wide": wide[0] if (wide and not long_v) else None,
-             "covers": {p: thumb for p in ("instagram", "facebook", "youtube", "dailymotion")} if thumb else {},
+             "covers": ({**{p: thumb for p in ("instagram", "facebook", "youtube")}, "dailymotion": dm_thumb} if thumb else {}),
              "thumbs": [thumb] if thumb else [], "text": text}]
 
 
@@ -358,11 +362,19 @@ class Drive:
                 texts[plat] = parse_platform_md(self.read_text(f["id"]), plat)
         if texts:
             return build_items(folder_id, name, files, texts)
-        for pf in [f for f in files if f["name"].lower().endswith(".pdf")]:
-            from . import kitpdf
-            t = kitpdf.pdf_text(self.read_bytes(pf["id"]))
-            if kitpdf.is_kit(t):
-                return build_kit_item(folder_id, name, files, kitpdf.parse(t))
+        from . import kittext
+        for pf in sorted([f for f in files if kittext.is_candidate(f)], key=lambda f: not f["name"].lower().endswith(".pdf")):
+            try:
+                if pf.get("mimeType") == kittext.GDOC:
+                    t = self.svc.files().export(fileId=pf["id"], mimeType="text/plain").execute().decode("utf-8-sig")
+                else:
+                    t = kittext.to_text(pf["name"], self.read_bytes(pf["id"]))
+                kit = kittext.parse(t)
+            except Exception as e:
+                print(f"[kit] cannot read {pf['name']}: {e}")
+                continue
+            if kit:
+                return build_kit_item(folder_id, name, files, kit)
         return []
 
     def items(self, root_id=None):
@@ -410,13 +422,17 @@ class Drive:
                     texts[m.group(1).lower()] = parse_platform_md(
                         zf.read(f["zip_entry"]).decode("utf-8-sig"), m.group(1).lower())
             if not texts:
-                pdfs = [f for f in files if f["name"].lower().endswith(".pdf")]
-                for pf in pdfs:
-                    from . import kitpdf
-                    t = kitpdf.pdf_text(zf.read(pf["zip_entry"]))
-                    if kitpdf.is_kit(t):
+                from . import kittext
+                cands = sorted([f for f in files if kittext.is_candidate(f)], key=lambda f: not f["name"].lower().endswith(".pdf"))
+                for pf in cands:
+                    try:
+                        kit = kittext.parse(kittext.to_text(pf["name"], zf.read(pf["zip_entry"])))
+                    except Exception as e:
+                        print(f"[kit] cannot read {pf['name']}: {e}")
+                        continue
+                    if kit:
                         self._measure(zf, files)
-                        items += build_kit_item(f"{z['id']}::{d}", f"{base}/{d}" if d else base, files, kitpdf.parse(t))
+                        items += build_kit_item(f"{z['id']}::{d}", f"{base}/{d}" if d else base, files, kit)
                         break
                 continue
             self._measure(zf, files)
