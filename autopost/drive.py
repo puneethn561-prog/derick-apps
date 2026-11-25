@@ -177,9 +177,17 @@ def build_items(pkg_id, pkg_name, files, texts):
             video = hd[0] if hd else sorted(g["videos"], key=lambda v: int(v.get("size") or 0))[0]
         text = {p: t[key] for p, t in texts.items() if key in t}
         items.append({"id": f"{pkg_id}:{key}", "name": f"{pkg_name} / {key}", "key": key, "kind": kind,
-                      "order": g["order"], "video": video, "video_wide": video_wide, "covers": g["covers"],
+                      "order": g["order"], "video": video, "video_wide": video_wide, "covers": _same_cover(g["covers"]),
                       "thumbs": sorted(g["thumbs"], key=lambda t: t["name"]), "text": text})
     return items
+
+
+def _same_cover(covers):
+    """One cover given for any platform -> used on every platform that has none (one thumbnail everywhere)."""
+    if not covers:
+        return covers
+    one = covers.get("instagram") or covers.get("facebook") or covers.get("youtube") or next(iter(covers.values()))
+    return {p: covers.get(p) or one for p in ("instagram", "facebook", "youtube", "dailymotion")}
 
 
 def build_kit_item(pkg_id, pkg_name, files, kit):
@@ -194,16 +202,16 @@ def build_kit_item(pkg_id, pkg_name, files, kit):
     named = [i for i in imgs if "thumb" in i["name"].lower() or "cover" in i["name"].lower()] or imgs
     wide_i = [i for i in named if re.search(r"16x9|16_9|horizontal|landscape|wide", i["name"], re.I)]
     tall_i = [i for i in named if i not in wide_i]
-    thumb = (tall_i or named or [None])[0]
-    dm_thumb = (wide_i or [thumb])[0]
     # 16:9-only package or > 2 min -> main video (YouTube + Dailymotion only)
     long_v = duration_s(video) > config.LONG_VIDEO_SECONDS or is_wide(video)
+    # one thumbnail for every platform, matching the video's shape (owner's rule, 25 Nov 2026)
+    thumb = ((wide_i if is_wide(video) else tall_i) or named or [None])[0]
     text = {p: v for p, v in kit.items() if not p.startswith("_")}
     key = re.sub(r"[^A-Za-z0-9]+", "", kit.get("_name") or pkg_name)[:40] or "Video"
     return [{"id": f"{pkg_id}:{key}", "name": f"{pkg_name} / {kit.get('_name') or key}", "key": key,
              "kind": "main" if long_v else "reel", "order": 1, "video": video,
              "video_wide": wide[0] if (wide and not long_v) else None,
-             "covers": ({**{p: thumb for p in ("instagram", "facebook", "youtube")}, "dailymotion": dm_thumb} if thumb else {}),
+             "covers": ({p: thumb for p in ("instagram", "facebook", "youtube", "dailymotion")} if thumb else {}),
              "thumbs": [thumb] if thumb else [], "text": text}]
 
 

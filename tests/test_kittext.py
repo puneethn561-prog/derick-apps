@@ -73,9 +73,9 @@ def test_not_a_kit_and_candidates():
     assert not kittext.is_candidate({"name": "00_Text_YouTube_x.md"})
 
 
-def test_kit_item_uses_wide_thumb_for_dailymotion():
+def test_kit_item_uses_one_thumb_everywhere():
     files = [{"id": "v", "name": "r.mp4", "videoMediaMetadata": {"width": 1080, "height": 1920, "durationMillis": 45000}},
              {"id": "t1", "name": "r-thumb-vertical.jpg"}, {"id": "t2", "name": "r-thumb-16x9.jpg"}]
     it = build_kit_item("z::", "pack", files, kittext.parse(TXT))[0]
     assert it["kind"] == "reel"
-    assert it["covers"]["dailymotion"]["id"] == "t2" and it["covers"]["youtube"]["id"] == "t1"
+    assert {c["id"] for c in it["covers"].values()} == {"t1"} and len(it["covers"]) == 4
