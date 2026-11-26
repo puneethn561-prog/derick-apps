@@ -9,7 +9,7 @@
       "what": "thumbnail"
     }
   ],
-  "auth_checked": "2026-11-25",
+  "auth_checked": "2026-11-26",
   "baselined": true,
   "check_seen": [],
   "cleanup": {},
@@ -62,20 +62,21 @@
     "1ScexQ01qLYgF0jwpk9oAAEzXRK_JbhzJ::Doctor-Doom-Reel:DoctorDoomReelDoctorDoomReel": {
       "dailymotion": {
         "needs_reschedule": false,
-        "slot": "2026-11-26T07:00:00+05:30",
+        "slot": "2026-11-27T07:00:00+05:30",
         "status": "queued",
         "track": "reel"
       },
       "facebook": {
+        "comment_id": "none",
         "id": "1134055612750661",
         "needs_reschedule": false,
         "slot": "2026-11-26T07:00:00+05:30",
-        "status": "scheduled",
+        "status": "published",
         "track": "reel"
       },
       "instagram": {
         "needs_reschedule": false,
-        "slot": "2026-11-26T07:00:00+05:30",
+        "slot": "2026-11-27T07:00:00+05:30",
         "status": "queued",
         "track": "reel"
       },
@@ -89,7 +90,7 @@
     }
   },
   "yt_quota": {
-    "day": "2026-11-24",
-    "used": 1651
+    "day": "2026-11-25",
+    "used": 1
   }
 }
