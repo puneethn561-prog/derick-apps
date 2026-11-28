@@ -9,7 +9,7 @@
       "what": "thumbnail"
     }
   ],
-  "auth_checked": "2026-11-27",
+  "auth_checked": "2026-11-28",
   "baselined": true,
   "check_seen": [],
   "cleanup": {},
@@ -90,7 +90,7 @@
     }
   },
   "yt_quota": {
-    "day": "2026-11-26",
+    "day": "2026-11-27",
     "used": 1
   }
 }
